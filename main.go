@@ -2,16 +2,22 @@ package main
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"strings"
 )
 
 var (
 	debug = flag.Bool("debug", false, "enable debug output")
 	//dry = flag.Bool("debug", false, "enable debug output")
+	tempDir = "/Users/gdanichev/GolandProjects/tsum/md/gocacheprog/temp"
+	//tempDir = os.TempDir()
 )
 
 func main() {
@@ -19,41 +25,25 @@ func main() {
 	//
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		if scanner.Err() != nil {
-			panic(scanner.Err())
-		}
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line := must(reader.ReadString('\n'))
 		if *debug {
-			fmt.Fprintln(os.Stderr, "> "+scanner.Text())
+			fmt.Fprintln(os.Stderr, "> "+line)
 		}
-		if strings.TrimSpace(string(scanner.Bytes())) == "" {
+		if strings.TrimSpace(line) == "" {
 			continue
 		}
 		var request Request
-		must0(json.Unmarshal(scanner.Bytes(), &request))
+		must0(json.Unmarshal([]byte(line), &request))
 
 		if request.Command == CmdGet {
 			resp(get(request))
 			continue
 		}
 		if request.Command == CmdPut {
-			for scanner.Scan() {
-				if scanner.Err() != nil {
-					panic(scanner.Err())
-				}
-				if strings.TrimSpace(string(scanner.Bytes())) == "" {
-					continue
-				}
-
-				bodyBase64 := scanner.Bytes()
-				if *debug {
-					fmt.Fprintf(os.Stderr, "recieved %d bytes of body: %s...\n", len(bodyBase64), string(bodyBase64[:min(10, len(bodyBase64))]))
-				}
-				break
-			}
-			resp(Response{ID: request.ID}, nil)
+			resp(put(request))
+			continue
 		}
 		if request.Command == CmdClose {
 			resp(Response{ID: request.ID}, nil)
@@ -63,26 +53,57 @@ func main() {
 	}
 }
 
-type handlerFunc func(req Request) (Response, error)
-
-//func router(req Request) (Response, error) {
-//	handlers := map[Cmd]handlerFunc{
-//		CmdPut: put,
-//		CmdGet: get,
-//	}
-//	h, ok := handlers[req.Command]
-//	if !ok {
-//		return Response{}, fmt.Errorf("unknown command: %s", req.Command)
-//	}
-//	return h(req)
-//}
+func toBase64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
+}
 
 func put(req Request) (Response, error) {
-	return Response{}, nil
+	if req.ActionID == nil || len(req.ActionID) == 0 {
+		return Response{ID: req.ID}, errors.New("invalid action id")
+	}
+	diskPath := path.Join(tempDir, base64.StdEncoding.EncodeToString(req.ActionID))
+	file, err := os.Create(diskPath)
+	if err != nil {
+		return Response{ID: req.ID}, err
+	}
+	defer file.Close()
+	_, err = file.Write(req.OutputID)
+	if err != nil {
+		return Response{ID: req.ID}, err
+	}
+	//_, err = file.WriteString("\n")
+	//if err != nil {
+	//	return Response{ID: req.ID}, err
+	//}
+	written, err := io.CopyN(file, os.Stdin, req.BodySize+1)
+	if err != nil {
+		return Response{ID: req.ID}, err
+	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "written %d to %s \n", written, diskPath)
+	}
+	return Response{ID: req.ID, DiskPath: diskPath}, nil
 }
 
 func get(req Request) (Response, error) {
-	return Response{ID: req.ID, Miss: true}, nil
+	diskPath := path.Join(tempDir, base64.StdEncoding.EncodeToString(req.ActionID))
+	if _, err := os.Stat(diskPath); err == nil {
+		file, err := os.Open(diskPath)
+		if err != nil {
+			return Response{ID: req.ID}, err
+		}
+		defer file.Close()
+		outputID, err := bufio.NewReader(file).ReadBytes('\n')
+		if err != nil {
+			return Response{ID: req.ID}, err
+		}
+
+		return Response{ID: req.ID, OutputID: outputID, DiskPath: diskPath}, nil
+	} else if os.IsNotExist(err) {
+		return Response{ID: req.ID, Miss: true}, nil
+	} else {
+		return Response{ID: req.ID}, err
+	}
 }
 
 func must[T any](t T, err error) T {
