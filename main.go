@@ -3,23 +3,25 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
 )
 
 var (
-	debug = true
+	debug = flag.Bool("debug", false, "enable debug output")
 )
 
 func main() {
+	flag.Parse()
 	//
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}})
 	//
-	handler := chain
+	handler := router
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		if debug {
+		if *debug {
 			os.Stderr.WriteString("> " + scanner.Text() + "\n")
 		}
 		if strings.TrimSpace(string(scanner.Bytes())) == "" {
@@ -48,32 +50,32 @@ func main() {
 
 type handlerFunc func(req Request) (Response, bool, error)
 
-func chain(req Request) (Response, bool, error) {
-	handlers := []handlerFunc{
-		put,
-		alwaysMiss,
+func router(req Request) (Response, bool, error) {
+	handlers := map[Cmd]handlerFunc{
+		CmdPut: put,
+		CmdGet: get,
 	}
-	for _, h := range handlers {
-		response, ok, err := h(req)
-		if err != nil {
-			return Response{}, false, err
-		}
-		if !ok {
-			continue
-		}
-		return response, true, nil
+	h, ok := handlers[req.Command]
+	if !ok {
+		return Response{}, false, fmt.Errorf("unknown command: %s", req.Command)
 	}
-	return Response{}, false, nil
+	return h(req)
 }
 
 func put(req Request) (Response, bool, error) {
-	if req.ID == 0 {
-		return Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, true, nil
+	if req.Command == CmdPut {
+		bodyBase64, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			return Response{}, false, err
+		}
+		if *debug {
+			fmt.Fprintf(os.Stderr, "received %d bytes\n", len(bodyBase64))
+		}
 	}
 	return Response{}, false, nil
 }
 
-func alwaysMiss(req Request) (Response, bool, error) {
+func get(req Request) (Response, bool, error) {
 	return Response{Miss: true}, true, nil
 }
 
@@ -87,7 +89,7 @@ func must[T any](t T, err error) T {
 func resp(r Response) {
 	bytes := must(json.Marshal(r))
 	_, _ = os.Stdout.Write(bytes)
-	if debug {
+	if *debug {
 		os.Stderr.WriteString(fmt.Sprintf("< %s\n", string(bytes)))
 	}
 
