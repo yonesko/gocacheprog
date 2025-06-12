@@ -16,9 +16,11 @@ import (
 )
 
 var (
-	debug    = flag.Bool("v", false, "enable verbose output")
-	dir      = flag.String("dir", "", "dir of cache")
-	outputCh = make(chan []byte)
+	debug                  = flag.Bool("v", false, "enable verbose output")
+	dir                    = flag.String("dir", "", "dir of cache")
+	inputReader  io.Reader = os.Stdin
+	outputWriter io.Writer = os.Stdout
+	outputCh               = make(chan []byte)
 )
 
 type (
@@ -50,7 +52,7 @@ func main() {
 	waitGroup.Add(1)
 	go func() {
 		defer waitGroup.Done()
-		writer := bufio.NewWriter(os.Stdout)
+		writer := bufio.NewWriter(outputWriter)
 		defer writer.Flush()
 		ticker := time.NewTicker(time.Millisecond)
 		for {
@@ -73,7 +75,7 @@ func main() {
 	ctx := context.Background()
 	storage := NewStat(NewFileSystemStorage(*dir))
 	keyConverter := hex.EncodeToString
-	reader := json.NewDecoder(bufio.NewReader(os.Stdin))
+	reader := json.NewDecoder(bufio.NewReader(inputReader))
 	for {
 		var request Request
 		if err := reader.Decode(&request); err != nil {
