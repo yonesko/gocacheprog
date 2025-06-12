@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
-	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -83,7 +82,7 @@ func put(req Request) (Response, error) {
 	if req.ActionID == nil || len(req.ActionID) == 0 {
 		return Response{ID: req.ID}, errors.New("invalid action id")
 	}
-	diskPath := path.Join(tempDir, calcDigestMD5(req.ActionID))
+	diskPath := path.Join(tempDir, calcFileName(req.ActionID))
 	file, err := os.Create(diskPath)
 	if err != nil {
 		return Response{ID: req.ID}, fmt.Errorf("creating file: %w", err)
@@ -107,7 +106,7 @@ func put(req Request) (Response, error) {
 }
 
 func get(req Request) (Response, error) {
-	diskPath := path.Join(tempDir, calcDigestMD5(req.ActionID))
+	diskPath := path.Join(tempDir, calcFileName(req.ActionID))
 	if _, err := os.Stat(diskPath); err == nil {
 		file, err := os.Open(diskPath)
 		if err != nil {
@@ -152,7 +151,6 @@ func resp(response Response, err error) {
 
 }
 
-func calcDigestMD5(data []byte) string {
-	hash := md5.Sum(data)
-	return hex.EncodeToString(hash[:])
+func calcFileName(data []byte) string {
+	return hex.EncodeToString(data)
 }
