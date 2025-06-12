@@ -49,7 +49,7 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 	defer indexFile.Close()
 	written := must(io.Copy(bodyFile, request.Body))
 	must(indexFile.WriteString(hex.EncodeToString(request.OutputID)))
-	if int64(written) != request.BodySize {
+	if written != request.BodySize {
 		return "", fmt.Errorf("file %q size mismatch: %d != %d", diskPathBody, written, request.BodySize)
 	}
 	return diskPathBody, nil
