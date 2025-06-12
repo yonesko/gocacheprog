@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -49,7 +50,7 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 	must(io.Copy(bodyFile, request.Body))
 	written := must(indexFile.WriteString(hex.EncodeToString(request.OutputID)))
 	if int64(written) != request.BodySize {
-		panic("file size mismatch")
+		return "", fmt.Errorf("file size mismatch: %d != %d", written, request.BodySize)
 	}
 	return diskPathBody, nil
 }
