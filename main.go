@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	debug = flag.Bool("debug", false, "enable debug output")
-	//dry = flag.Bool("debug", false, "enable debug output")
+	debug   = flag.Bool("v", false, "enable verbose output")
 	tempDir = "/Users/gdanichev/GolandProjects/tsum/md/gocacheprog/temp"
 	//tempDir = os.TempDir()
 )
