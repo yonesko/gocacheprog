@@ -21,12 +21,18 @@ var (
 	//tempDir = os.TempDir()
 )
 
+type (
+	handlerFunc func(req Request) (Response, error)
+)
+
 func main() {
 	flag.Parse()
 	//
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
-	//io.Copy(os.Stderr, os.Stdin)
+	statistics := &stat{}
+	getFunc := metric(statistics, get)
+	putFunc := metric(statistics, put)
 	reader := bufio.NewReader(os.Stdin)
 	var pendingPutRequests list.List
 	pendingPutRequests.Init()
@@ -52,18 +58,18 @@ func main() {
 			pendingPutRequests.Remove(element)
 			request = element.Value.(Request)
 			request.Body = bytes.NewReader(line[1 : len(line)-1]) //remove quotes.
-			resp(put(request))
+			resp(putFunc(request))
 			continue
 		}
 
 		if request.Command == CmdGet {
-			resp(get(request))
+			resp(getFunc(request))
 			continue
 		}
 		if request.Command == CmdPut {
 			if request.BodySize == 0 {
 				request.Body = strings.NewReader("")
-				resp(put(request))
+				resp(putFunc(request))
 				continue
 			}
 			pendingPutRequests.PushBack(request)
@@ -72,6 +78,7 @@ func main() {
 		if request.Command == CmdClose {
 			resp(Response{ID: request.ID}, nil)
 			must0(os.Stdout.Close())
+			fmt.Fprintf(os.Stderr, "\nstatistics: %+v\n", statistics)
 			os.Exit(0)
 		}
 	}
