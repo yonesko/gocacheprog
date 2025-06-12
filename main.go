@@ -1,18 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"container/list"
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
 )
 
 var (
@@ -45,31 +43,25 @@ func main() {
 	//
 	ctx := context.Background()
 	storage := NewStat(NewFileSystemStorage(*dir))
-	reader := bufio.NewReader(os.Stdin)
-	var pendingPutRequests list.List
-	pendingPutRequests.Init()
+	reader := json.NewDecoder(os.Stdin)
 	for {
-		line, err := reader.ReadBytes('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+		var request Request
+		if err := reader.Decode(&request); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			panic(err)
 		}
-		if *debug {
-			fmt.Fprint(os.Stderr, "> "+string(line))
-		}
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
-		}
-		var request Request
-		if strings.HasPrefix(string(line), "{") {
-			must0(json.Unmarshal(line, &request))
-		} else {
-			element := pendingPutRequests.Front()
-			pendingPutRequests.Remove(element)
-			request = element.Value.(Request)
-			request.Body = bytes.NewReader(line[1 : len(line)-1]) //remove quotes.
+		if request.Command == CmdPut {
+			if request.BodySize > 0 {
+				//TODO stream
+				//TODO checksum
+				var body []byte
+				must0(reader.Decode(&body))
+				request.Body = bytes.NewReader(body)
+			} else {
+				request.Body = bytes.NewBuffer(nil)
+			}
 			diskPath, err := storage.Put(ctx, calcFileName(request.ActionID), request.OutputID, request.Body)
 			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
 			continue
@@ -80,18 +72,8 @@ func main() {
 			resp(Response{ID: request.ID, Miss: ok, DiskPath: entry.DiskPath, OutputID: entry.OutputID}, err)
 			continue
 		}
-		if request.Command == CmdPut {
-			if request.BodySize == 0 {
-				request.Body = strings.NewReader("")
-				diskPath, err := storage.Put(ctx, calcFileName(request.ActionID), request.OutputID, request.Body)
-				resp(Response{ID: request.ID, DiskPath: diskPath}, err)
-				continue
-			}
-			pendingPutRequests.PushBack(request)
-			continue
-		}
 		if request.Command == CmdClose {
-			err = storage.Close(ctx)
+			err := storage.Close(ctx)
 			resp(Response{ID: request.ID}, err)
 			must0(os.Stdout.Close())
 			os.Exit(0)
