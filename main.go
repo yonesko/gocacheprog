@@ -53,7 +53,7 @@ func main() {
 			element := pendingPutRequests.Front()
 			pendingPutRequests.Remove(element)
 			request = element.Value.(Request)
-			request.Body = bytes.NewReader(line[1 : len(line)-1]) //remove quotes
+			request.Body = bytes.NewReader(line[1 : len(line)-1]) //remove quotes.
 			resp(put(request))
 			continue
 		}
@@ -63,6 +63,11 @@ func main() {
 			continue
 		}
 		if request.Command == CmdPut {
+			if request.BodySize == 0 {
+				request.Body = strings.NewReader("")
+				resp(put(request))
+				continue
+			}
 			pendingPutRequests.PushBack(request)
 			continue
 		}
