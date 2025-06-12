@@ -53,8 +53,8 @@ func main() {
 			element := pendingPutRequests.Front()
 			pendingPutRequests.Remove(element)
 			request = element.Value.(Request)
-			request.Body = bytes.NewReader(line)
-			resp(put(element.Value.(Request)))
+			request.Body = bytes.NewReader(line[1 : len(line)-1]) //remove quotes
+			resp(put(request))
 			continue
 		}
 
