@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"container/list"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 )
 
 var (
@@ -28,7 +30,8 @@ func main() {
 	//
 	//io.Copy(os.Stderr, os.Stdin)
 	reader := bufio.NewReader(os.Stdin)
-	var lastPutRequest *Request
+	var pendingPutRequests list.List
+	pendingPutRequests.Init()
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err == io.EOF {
@@ -44,10 +47,15 @@ func main() {
 			continue
 		}
 		var request Request
-		err = json.Unmarshal(line, &request)
-		if err != nil {
-			lastPutRequest.Body = bytes.NewReader(line)
-			request = *lastPutRequest
+		if strings.HasPrefix(string(line), "{") {
+			must0(json.Unmarshal(line, &request))
+		} else {
+			element := pendingPutRequests.Front()
+			pendingPutRequests.Remove(element)
+			request = element.Value.(Request)
+			request.Body = bytes.NewReader(line)
+			resp(put(element.Value.(Request)))
+			continue
 		}
 
 		if request.Command == CmdGet {
@@ -55,12 +63,7 @@ func main() {
 			continue
 		}
 		if request.Command == CmdPut {
-			if lastPutRequest == nil {
-				lastPutRequest = &request
-				continue
-			}
-			resp(put(request))
-			lastPutRequest = nil
+			pendingPutRequests.PushBack(request)
 			continue
 		}
 		if request.Command == CmdClose {
