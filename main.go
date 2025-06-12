@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
-	"encoding/base64"
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,7 +12,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"strings"
 )
 
 var (
@@ -25,24 +26,41 @@ func main() {
 	//
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
+	//io.Copy(os.Stderr, os.Stdin)
 	reader := bufio.NewReader(os.Stdin)
+	var lastPutRequest *Request
 	for {
-		line := must(reader.ReadString('\n'))
-		if *debug {
-			fmt.Fprintln(os.Stderr, "> "+line)
+		line, err := reader.ReadBytes('\n')
+		if err == io.EOF {
+			break
 		}
-		if strings.TrimSpace(line) == "" {
+		if err != nil {
+			panic(err)
+		}
+		if *debug {
+			fmt.Fprint(os.Stderr, "> "+string(line))
+		}
+		if len(bytes.TrimSpace(line)) == 0 {
 			continue
 		}
 		var request Request
-		must0(json.Unmarshal([]byte(line), &request))
+		err = json.Unmarshal(line, &request)
+		if err != nil {
+			lastPutRequest.Body = bytes.NewReader(line)
+			request = *lastPutRequest
+		}
 
 		if request.Command == CmdGet {
 			resp(get(request))
 			continue
 		}
 		if request.Command == CmdPut {
+			if lastPutRequest == nil {
+				lastPutRequest = &request
+				continue
+			}
 			resp(put(request))
+			lastPutRequest = nil
 			continue
 		}
 		if request.Command == CmdClose {
@@ -53,40 +71,35 @@ func main() {
 	}
 }
 
-func toBase64(b []byte) string {
-	return base64.StdEncoding.EncodeToString(b)
-}
-
 func put(req Request) (Response, error) {
 	if req.ActionID == nil || len(req.ActionID) == 0 {
 		return Response{ID: req.ID}, errors.New("invalid action id")
 	}
-	diskPath := path.Join(tempDir, base64.StdEncoding.EncodeToString(req.ActionID))
+	diskPath := path.Join(tempDir, calcDigestMD5(req.ActionID))
 	file, err := os.Create(diskPath)
 	if err != nil {
-		return Response{ID: req.ID}, err
+		return Response{ID: req.ID}, fmt.Errorf("creating file: %w", err)
 	}
 	defer file.Close()
 	_, err = file.Write(req.OutputID)
 	if err != nil {
-		return Response{ID: req.ID}, err
+		return Response{ID: req.ID}, fmt.Errorf("writing to file: %w", err)
 	}
-	//_, err = file.WriteString("\n")
-	//if err != nil {
-	//	return Response{ID: req.ID}, err
-	//}
-	written, err := io.CopyN(file, os.Stdin, req.BodySize+1)
+	_, err = file.WriteString("\n")
 	if err != nil {
-		return Response{ID: req.ID}, err
+		return Response{ID: req.ID}, fmt.Errorf("writing to file: %w", err)
 	}
-	if *debug {
-		fmt.Fprintf(os.Stderr, "written %d to %s \n", written, diskPath)
+	//written, err := io.CopyN(file, os.Stdin, req.BodySize+1)
+	//TODO make buff less copy
+	_, err = io.Copy(file, req.Body)
+	if err != nil {
+		return Response{ID: req.ID}, fmt.Errorf("writing to file: %w", err)
 	}
 	return Response{ID: req.ID, DiskPath: diskPath}, nil
 }
 
 func get(req Request) (Response, error) {
-	diskPath := path.Join(tempDir, base64.StdEncoding.EncodeToString(req.ActionID))
+	diskPath := path.Join(tempDir, calcDigestMD5(req.ActionID))
 	if _, err := os.Stat(diskPath); err == nil {
 		file, err := os.Open(diskPath)
 		if err != nil {
@@ -129,4 +142,9 @@ func resp(response Response, err error) {
 		os.Stderr.WriteString(fmt.Sprintf("< %s\n", string(bytes)))
 	}
 
+}
+
+func calcDigestMD5(data []byte) string {
+	hash := md5.Sum(data)
+	return hex.EncodeToString(hash[:])
 }
