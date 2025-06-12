@@ -158,5 +158,8 @@ func resp(response Response, err error) {
 }
 
 func calcFileName(data []byte) string {
+	if len(data) == 0 {
+		panic("calcFileName called with empty data")
+	}
 	return hex.EncodeToString(data)
 }
