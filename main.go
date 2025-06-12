@@ -43,6 +43,7 @@ func main() {
 	//
 	ctx := context.Background()
 	storage := NewStat(NewFileSystemStorage(*dir))
+	keyConverter := hex.EncodeToString
 	reader := json.NewDecoder(os.Stdin)
 	for {
 		var request Request
@@ -62,13 +63,13 @@ func main() {
 			} else {
 				request.Body = bytes.NewBuffer(nil)
 			}
-			diskPath, err := storage.Put(ctx, calcFileName(request.ActionID), request.OutputID, request.Body)
+			diskPath, err := storage.Put(ctx, keyConverter(request.ActionID), request.OutputID, request.Body)
 			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
 			continue
 		}
 
 		if request.Command == CmdGet {
-			entry, ok, err := storage.Get(ctx, calcFileName(request.ActionID))
+			entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
 			resp(Response{ID: request.ID, Miss: ok, DiskPath: entry.DiskPath, OutputID: entry.OutputID}, err)
 			continue
 		}
@@ -104,11 +105,4 @@ func resp(response Response, err error) {
 		os.Stderr.WriteString(fmt.Sprintf("< %s\n", string(b)))
 	}
 
-}
-
-func calcFileName(data []byte) string {
-	if len(data) == 0 {
-		panic("calcFileName called with empty data")
-	}
-	return hex.EncodeToString(data)
 }
