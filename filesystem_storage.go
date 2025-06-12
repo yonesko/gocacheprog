@@ -18,14 +18,14 @@ func NewFileSystemStorage(dir string) Storage {
 	return &fileSystemStorage{dir: dir}
 }
 
-func (f fileSystemStorage) Get(ctx context.Context, key string) (Entry, bool, error) {
+func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
 	diskPathBody := path.Join(f.dir, key+"-o")
 	diskPathIndex := path.Join(f.dir, key+"-i")
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		outputID := must(hex.DecodeString(string(must(os.ReadFile(diskPathIndex)))))
-		return Entry{OutputID: outputID, DiskPath: diskPathBody}, true, nil
+		return GetResponse{OutputID: outputID, DiskPath: diskPathBody}, true, nil
 	}
-	return Entry{}, false, nil
+	return GetResponse{}, false, nil
 }
 
 func isFileExists(path string) bool {
@@ -36,19 +36,21 @@ func isFileExists(path string) bool {
 	return info.Mode().IsRegular()
 }
 
-func (f fileSystemStorage) Put(ctx context.Context, key string, outputID []byte, body io.Reader) (string, error) {
-	if len(key) == 0 {
+func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string, error) {
+	if len(request.Key) == 0 {
 		return "", errors.New("empty key")
 	}
-	diskPathBody := path.Join(f.dir, key+"-o")
-	diskPathIndex := path.Join(f.dir, key+"-i")
+	diskPathBody := path.Join(f.dir, request.Key+"-o")
+	diskPathIndex := path.Join(f.dir, request.Key+"-i")
 	bodyFile := must(os.Create(diskPathBody))
 	indexFile := must(os.Create(diskPathIndex))
 	defer bodyFile.Close()
 	defer indexFile.Close()
-	must(io.Copy(bodyFile, body))
-	must(indexFile.WriteString(hex.EncodeToString(outputID)))
-	//TODO compare sizes
+	must(io.Copy(bodyFile, request.Body))
+	written := must(indexFile.WriteString(hex.EncodeToString(request.OutputID)))
+	if int64(written) != request.BodySize {
+		panic("file size mismatch")
+	}
 	return diskPathBody, nil
 }
 

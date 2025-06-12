@@ -20,14 +20,20 @@ var (
 )
 
 type (
-	Entry struct {
+	GetResponse struct {
 		OutputID []byte
 		DiskPath string
 	}
+	PutRequest struct {
+		Key      string
+		OutputID []byte
+		Body     io.Reader
+		BodySize int64
+	}
 	Storage interface {
-		Get(ctx context.Context, key string) (Entry, bool, error)
+		Get(ctx context.Context, key string) (GetResponse, bool, error)
 		//Put returns DiskPath TODO add size
-		Put(ctx context.Context, key string, outputID []byte, body io.Reader) (string, error)
+		Put(ctx context.Context, request PutRequest) (string, error)
 		Close(ctx context.Context) error
 	}
 )
@@ -63,7 +69,12 @@ func main() {
 			} else {
 				request.Body = bytes.NewBuffer(nil)
 			}
-			diskPath, err := storage.Put(ctx, keyConverter(request.ActionID), request.OutputID, request.Body)
+			diskPath, err := storage.Put(ctx, PutRequest{
+				Key:      keyConverter(request.ActionID),
+				OutputID: request.OutputID,
+				Body:     request.Body,
+				BodySize: request.BodySize,
+			})
 			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
 			continue
 		}

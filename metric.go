@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"sync/atomic"
 )
@@ -23,7 +22,7 @@ func NewStat(storage Storage) Storage {
 	return &stat{Storage: storage}
 }
 
-func (s *stat) Get(ctx context.Context, key string) (Entry, bool, error) {
+func (s *stat) Get(ctx context.Context, key string) (GetResponse, bool, error) {
 	atomic.AddInt64(&s.getCmd, 1)
 	entry, ok, err := s.Storage.Get(ctx, key)
 	if !ok {
@@ -35,9 +34,9 @@ func (s *stat) Get(ctx context.Context, key string) (Entry, bool, error) {
 	return entry, ok, err
 }
 
-func (s *stat) Put(ctx context.Context, key string, outputID []byte, body io.Reader) (string, error) {
+func (s *stat) Put(ctx context.Context, request PutRequest) (string, error) {
 	atomic.AddInt64(&s.putCmd, 1)
-	path, err := s.Storage.Put(ctx, key, outputID, body)
+	path, err := s.Storage.Put(ctx, request)
 	if err != nil {
 		atomic.AddInt64(&s.errors, 1)
 	}
