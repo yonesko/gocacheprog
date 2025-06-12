@@ -26,7 +26,7 @@ type (
 	}
 	Storage interface {
 		Get(ctx context.Context, key string) (Entry, bool, error)
-		//Put returns DiskPath
+		//Put returns DiskPath TODO add size
 		Put(ctx context.Context, key string, outputID []byte, body io.Reader) (string, error)
 		Close(ctx context.Context) error
 	}

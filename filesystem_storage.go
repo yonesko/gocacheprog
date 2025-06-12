@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -20,51 +19,37 @@ func NewFileSystemStorage(dir string) Storage {
 }
 
 func (f fileSystemStorage) Get(ctx context.Context, key string) (Entry, bool, error) {
-	diskPath := path.Join(f.dir, key)
-	if _, err := os.Stat(diskPath); err == nil {
-		file, err := os.Open(diskPath)
-		if err != nil {
-			return Entry{}, false, err
-		}
-		defer file.Close()
-		outputID, err := bufio.NewReader(file).ReadBytes('\n')
-		if err != nil {
-			return Entry{}, false, err
-		}
-		outputID = outputID[:len(outputID)-1] //remove \n
-
-		return Entry{OutputID: outputID, DiskPath: diskPath}, true, nil
-	} else if os.IsNotExist(err) {
-		return Entry{}, false, nil
-	} else {
-		return Entry{}, false, err
+	diskPathBody := path.Join(f.dir, key+"-o")
+	diskPathIndex := path.Join(f.dir, key+"-i")
+	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
+		outputID := must(hex.DecodeString(string(must(os.ReadFile(diskPathIndex)))))
+		return Entry{OutputID: outputID, DiskPath: diskPathBody}, true, nil
 	}
+	return Entry{}, false, nil
+}
+
+func isFileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.Mode().IsRegular()
 }
 
 func (f fileSystemStorage) Put(ctx context.Context, key string, outputID []byte, body io.Reader) (string, error) {
 	if len(key) == 0 {
 		return "", errors.New("empty key")
 	}
-	diskPath := path.Join(f.dir, key)
-	file, err := os.Create(diskPath)
-	if err != nil {
-		return "", fmt.Errorf("creating file: %w", err)
-	}
-	defer file.Close()
-	_, err = file.Write(outputID)
-	if err != nil {
-		return "", fmt.Errorf("writing to file: %w", err)
-	}
-	_, err = file.WriteString("\n")
-	if err != nil {
-		return "", fmt.Errorf("writing to file: %w", err)
-	}
-	_, err = io.Copy(file, body)
-	if err != nil {
-		return "", fmt.Errorf("writing to file: %w", err)
-	}
-	return diskPath, nil
-
+	diskPathBody := path.Join(f.dir, key+"-o")
+	diskPathIndex := path.Join(f.dir, key+"-i")
+	bodyFile := must(os.Create(diskPathBody))
+	indexFile := must(os.Create(diskPathIndex))
+	defer must0(bodyFile.Close())
+	defer must0(indexFile.Close())
+	must(io.Copy(bodyFile, body))
+	must(indexFile.WriteString(hex.EncodeToString(outputID)))
+	//TODO compare sizes
+	return diskPathBody, nil
 }
 
 func (f fileSystemStorage) Close(ctx context.Context) error {
