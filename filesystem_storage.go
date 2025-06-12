@@ -44,8 +44,8 @@ func (f fileSystemStorage) Put(ctx context.Context, key string, outputID []byte,
 	diskPathIndex := path.Join(f.dir, key+"-i")
 	bodyFile := must(os.Create(diskPathBody))
 	indexFile := must(os.Create(diskPathIndex))
-	defer must0(bodyFile.Close())
-	defer must0(indexFile.Close())
+	defer bodyFile.Close()
+	defer indexFile.Close()
 	must(io.Copy(bodyFile, body))
 	must(indexFile.WriteString(hex.EncodeToString(outputID)))
 	//TODO compare sizes
