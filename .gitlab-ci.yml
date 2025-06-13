@@ -38,9 +38,9 @@ unit-test-job: # This job runs in the test stage.
 
 lint-test-job: # This job also runs in the test stage.
   stage: test    # It can run at the same time as unit-test-job (in parallel).
+  image: repo.int.tsum.com/delta/golangci-lint:v2.1.6
   script:
-    - echo "Linting code... This will take about 10 seconds."
-    - echo "No lint issues found."
+    - golangci-lint run -v ./...
 
 deploy-job: # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
