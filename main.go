@@ -79,29 +79,25 @@ func main() {
 			} else {
 				request.Body = bytes.NewBuffer(nil)
 			}
-			go func(request Request) {
-				diskPath, err := storage.Put(ctx, PutRequest{
-					Key:      keyConverter(request.ActionID),
-					OutputID: request.OutputID,
-					Body:     request.Body,
-					BodySize: request.BodySize,
-				})
-				resp(Response{ID: request.ID, DiskPath: diskPath}, err)
-			}(request)
+			diskPath, err := storage.Put(ctx, PutRequest{
+				Key:      keyConverter(request.ActionID),
+				OutputID: request.OutputID,
+				Body:     request.Body,
+				BodySize: request.BodySize,
+			})
+			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
 			continue
 		}
 
 		if request.Command == CmdGet {
-			go func(request Request) {
-				entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
-				resp(Response{
-					ID:       request.ID,
-					Miss:     !ok,
-					DiskPath: entry.DiskPath,
-					OutputID: entry.OutputID,
-					Size:     entry.BodySize,
-				}, err)
-			}(request)
+			entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
+			resp(Response{
+				ID:       request.ID,
+				Miss:     !ok,
+				DiskPath: entry.DiskPath,
+				OutputID: entry.OutputID,
+				Size:     entry.BodySize,
+			}, err)
 			continue
 		}
 		if request.Command == CmdClose {
