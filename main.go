@@ -28,6 +28,7 @@ type (
 	GetResponse struct {
 		OutputID []byte
 		DiskPath string
+		BodySize int64
 	}
 	PutRequest struct {
 		Key      string
