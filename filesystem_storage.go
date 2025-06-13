@@ -54,7 +54,7 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 	if written != request.BodySize {
 		return "", fmt.Errorf("file %q size mismatch: %d != %d", diskPathBody, written, request.BodySize)
 	}
-	return diskPathBody, nil
+	return must(filepath.Abs(diskPathBody)), nil
 }
 
 func (f fileSystemStorage) Close(ctx context.Context) error {
