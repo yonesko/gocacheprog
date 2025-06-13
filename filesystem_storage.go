@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 type fileSystemStorage struct {
@@ -24,6 +25,7 @@ func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bo
 	diskPathIndex := path.Join(f.dir, key+"-i")
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		outputID := must(hex.DecodeString(string(must(os.ReadFile(diskPathIndex)))))
+		diskPathBody = must(filepath.Abs(diskPathBody))
 		return GetResponse{OutputID: outputID, DiskPath: diskPathBody}, true, nil
 	}
 	return GetResponse{}, false, nil

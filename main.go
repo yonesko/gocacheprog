@@ -61,7 +61,7 @@ func main() {
 		defer waitGroup.Done()
 		writer := bufio.NewWriter(outputWriter)
 		defer writer.Flush()
-		ticker := time.NewTicker(time.Millisecond)
+		ticker := time.NewTicker(10 * time.Millisecond)
 		for {
 			select {
 			case b, ok := <-outputCh:
@@ -116,7 +116,7 @@ func main() {
 		if request.Command == CmdGet {
 			go func(request Request) {
 				entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
-				resp(Response{ID: request.ID, Miss: ok, DiskPath: entry.DiskPath, OutputID: entry.OutputID}, err)
+				resp(Response{ID: request.ID, Miss: !ok, DiskPath: entry.DiskPath, OutputID: entry.OutputID}, err)
 			}(request)
 			continue
 		}
