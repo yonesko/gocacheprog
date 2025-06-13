@@ -11,8 +11,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
-	"time"
 )
 
 var (
@@ -21,7 +19,6 @@ var (
 	dir                    = flag.String("dir", "", "dir of cache")
 	inputReader  io.Reader = os.Stdin
 	outputWriter io.Writer = os.Stdout
-	outputCh               = make(chan []byte)
 )
 
 type (
@@ -57,27 +54,6 @@ func main() {
 	if *logRequest {
 		inputReader = newLoggingReader(os.Stdin)
 	}
-	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(1)
-	go func() {
-		defer waitGroup.Done()
-		writer := bufio.NewWriter(outputWriter)
-		defer writer.Flush()
-		ticker := time.NewTicker(10 * time.Millisecond)
-		for {
-			select {
-			case b, ok := <-outputCh:
-				if !ok {
-					return
-				}
-				must(writer.Write(b))
-			case <-ticker.C:
-				if writer.Buffered() > 0 {
-					must0(writer.Flush())
-				}
-			}
-		}
-	}()
 	//handshake
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
@@ -131,8 +107,6 @@ func main() {
 		if request.Command == CmdClose {
 			err := storage.Close(ctx)
 			resp(Response{ID: request.ID}, err)
-			close(outputCh)
-			waitGroup.Wait()
 			os.Exit(0)
 		}
 	}
@@ -156,6 +130,6 @@ func resp(response Response, err error) {
 		response.Err = err.Error()
 	}
 	b := must(json.Marshal(response))
-	outputCh <- b
-	outputCh <- []byte{'\n'}
+	must(outputWriter.Write(b))
+	must(outputWriter.Write([]byte{'\n'}))
 }
