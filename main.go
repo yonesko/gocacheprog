@@ -18,8 +18,8 @@ import (
 var (
 	debug                  = flag.Bool("v", false, "enable verbose output")
 	dir                    = flag.String("dir", "", "dir of cache")
-	inputReader  io.Reader = os.Stdin
-	outputWriter io.Writer = os.Stdout
+	inputReader  io.Reader = newLoggingReader(os.Stdin)
+	outputWriter io.Writer = newLoggingWriter(os.Stdout)
 	outputCh               = make(chan []byte)
 )
 
