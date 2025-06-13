@@ -117,7 +117,13 @@ func main() {
 		if request.Command == CmdGet {
 			go func(request Request) {
 				entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
-				resp(Response{ID: request.ID, Miss: !ok, DiskPath: entry.DiskPath, OutputID: entry.OutputID}, err)
+				resp(Response{
+					ID:       request.ID,
+					Miss:     !ok,
+					DiskPath: entry.DiskPath,
+					OutputID: entry.OutputID,
+					Size:     entry.BodySize,
+				}, err)
 			}(request)
 			continue
 		}
