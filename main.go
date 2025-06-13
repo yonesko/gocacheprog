@@ -149,4 +149,5 @@ func resp(response Response, err error) {
 	}
 	b := must(json.Marshal(response))
 	outputCh <- b
+	outputCh <- []byte{'\n'}
 }

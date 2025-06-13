@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 )
@@ -19,7 +18,7 @@ func (l loggingReader) Read(p []byte) (n int, err error) {
 	if err != nil {
 		return read, err
 	}
-	fmt.Fprintf(os.Stderr, "> %s\n", string(p[:read]))
+	os.Stderr.Write(p[:read])
 	return read, err
 }
 
@@ -36,6 +35,6 @@ func (l loggingWriter) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return write, err
 	}
-	fmt.Fprintf(os.Stderr, "< %s\n", string(p[:write]))
+	os.Stderr.Write(p[:write])
 	return write, err
 }
