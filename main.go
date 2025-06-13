@@ -11,8 +11,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
-	"time"
 )
 
 var (
@@ -21,7 +19,6 @@ var (
 	dir                    = flag.String("dir", "", "dir of cache")
 	inputReader  io.Reader = os.Stdin
 	outputWriter io.Writer = os.Stdout
-	outputCh               = make(chan []byte)
 )
 
 type (
@@ -37,8 +34,9 @@ type (
 		BodySize int64
 	}
 	Storage interface {
+		//Get asks for file, ensures that it exists at DiskPath
 		Get(ctx context.Context, key string) (GetResponse, bool, error)
-		//Put returns DiskPath TODO add size
+		//Put loads file, ensures that it exists at DiskPath
 		Put(ctx context.Context, request PutRequest) (string, error)
 		Close(ctx context.Context) error
 	}
@@ -56,27 +54,6 @@ func main() {
 	if *logRequest {
 		inputReader = newLoggingReader(os.Stdin)
 	}
-	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(1)
-	go func() {
-		defer waitGroup.Done()
-		writer := bufio.NewWriter(outputWriter)
-		defer writer.Flush()
-		ticker := time.NewTicker(10 * time.Millisecond)
-		for {
-			select {
-			case b, ok := <-outputCh:
-				if !ok {
-					return
-				}
-				must(writer.Write(b))
-			case <-ticker.C:
-				if writer.Buffered() > 0 {
-					must0(writer.Flush())
-				}
-			}
-		}
-	}()
 	//handshake
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
@@ -102,36 +79,30 @@ func main() {
 			} else {
 				request.Body = bytes.NewBuffer(nil)
 			}
-			go func(request Request) {
-				diskPath, err := storage.Put(ctx, PutRequest{
-					Key:      keyConverter(request.ActionID),
-					OutputID: request.OutputID,
-					Body:     request.Body,
-					BodySize: request.BodySize,
-				})
-				resp(Response{ID: request.ID, DiskPath: diskPath}, err)
-			}(request)
+			diskPath, err := storage.Put(ctx, PutRequest{
+				Key:      keyConverter(request.ActionID),
+				OutputID: request.OutputID,
+				Body:     request.Body,
+				BodySize: request.BodySize,
+			})
+			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
 			continue
 		}
 
 		if request.Command == CmdGet {
-			go func(request Request) {
-				entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
-				resp(Response{
-					ID:       request.ID,
-					Miss:     !ok,
-					DiskPath: entry.DiskPath,
-					OutputID: entry.OutputID,
-					Size:     entry.BodySize,
-				}, err)
-			}(request)
+			entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
+			resp(Response{
+				ID:       request.ID,
+				Miss:     !ok,
+				DiskPath: entry.DiskPath,
+				OutputID: entry.OutputID,
+				Size:     entry.BodySize,
+			}, err)
 			continue
 		}
 		if request.Command == CmdClose {
 			err := storage.Close(ctx)
 			resp(Response{ID: request.ID}, err)
-			close(outputCh)
-			waitGroup.Wait()
 			os.Exit(0)
 		}
 	}
@@ -155,6 +126,6 @@ func resp(response Response, err error) {
 		response.Err = err.Error()
 	}
 	b := must(json.Marshal(response))
-	outputCh <- b
-	outputCh <- []byte{'\n'}
+	outputWriter.Write(b)
+	outputWriter.Write([]byte{'\n'})
 }
