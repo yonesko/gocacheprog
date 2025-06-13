@@ -37,8 +37,9 @@ type (
 		BodySize int64
 	}
 	Storage interface {
+		//Get asks for file, ensures that it exists at DiskPath
 		Get(ctx context.Context, key string) (GetResponse, bool, error)
-		//Put returns DiskPath TODO add size
+		//Put loads file, ensures that it exists at DiskPath
 		Put(ctx context.Context, request PutRequest) (string, error)
 		Close(ctx context.Context) error
 	}
