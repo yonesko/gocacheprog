@@ -8,7 +8,7 @@ import (
 )
 
 type (
-	stat struct {
+	metrics struct {
 		getCmd     int64
 		getMissCmd int64
 		putCmd     int64
@@ -19,10 +19,10 @@ type (
 )
 
 func NewStat(storage Storage) Storage {
-	return &stat{Storage: storage}
+	return &metrics{Storage: storage}
 }
 
-func (s *stat) Get(ctx context.Context, key string) (GetResponse, bool, error) {
+func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error) {
 	atomic.AddInt64(&s.getCmd, 1)
 	entry, ok, err := s.Storage.Get(ctx, key)
 	if !ok {
@@ -34,7 +34,7 @@ func (s *stat) Get(ctx context.Context, key string) (GetResponse, bool, error) {
 	return entry, ok, err
 }
 
-func (s *stat) Put(ctx context.Context, request PutRequest) (string, error) {
+func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
 	atomic.AddInt64(&s.putCmd, 1)
 	path, err := s.Storage.Put(ctx, request)
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *stat) Put(ctx context.Context, request PutRequest) (string, error) {
 	return path, err
 }
 
-func (s *stat) Close(ctx context.Context) error {
+func (s *metrics) Close(ctx context.Context) error {
 	err := s.Storage.Close(ctx)
 	atomic.AddInt64(&s.closeCmd, 1)
 	if err != nil {
