@@ -16,10 +16,11 @@ import (
 )
 
 var (
-	debug                  = flag.Bool("v", false, "enable verbose output")
+	logResponse            = flag.Bool("log_resp", false, "log responses")
+	logRequest             = flag.Bool("log_req", false, "log requests")
 	dir                    = flag.String("dir", "", "dir of cache")
-	inputReader  io.Reader = newLoggingReader(os.Stdin)
-	outputWriter io.Writer = newLoggingWriter(os.Stdout)
+	inputReader  io.Reader = os.Stdin
+	outputWriter io.Writer = os.Stdout
 	outputCh               = make(chan []byte)
 )
 
@@ -47,6 +48,12 @@ func main() {
 	if *dir == "" {
 		flag.Usage()
 		log.Fatal("dir is required")
+	}
+	if *logResponse {
+		outputWriter = newLoggingWriter(os.Stdout)
+	}
+	if *logRequest {
+		inputReader = newLoggingReader(os.Stdin)
 	}
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(1)
