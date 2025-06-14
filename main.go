@@ -72,7 +72,6 @@ func main() {
 		if request.Command == CmdPut {
 			if request.BodySize > 0 {
 				//TODO stream
-				//TODO checksum
 				var body []byte
 				must0(reader.Decode(&body))
 				request.Body = bytes.NewReader(body)
