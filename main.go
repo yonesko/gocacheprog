@@ -27,6 +27,7 @@ type (
 		OutputID []byte
 		DiskPath string
 		BodySize int64
+		Body     io.Reader
 	}
 	PutRequest struct {
 		Key      string
@@ -37,7 +38,7 @@ type (
 	Storage interface {
 		//Get asks for file, ensures that it exists at DiskPath
 		Get(ctx context.Context, key string) (GetResponse, bool, error)
-		//Put loads file, ensures that it exists at DiskPath
+		//Put loads file, ensures that it exists at DiskPath, returns disk path
 		Put(ctx context.Context, request PutRequest) (string, error)
 		Close(ctx context.Context) error
 	}

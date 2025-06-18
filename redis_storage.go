@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/redis/go-redis/v9"
 )
 
 type redisStorage struct {
+	cluster *redis.ClusterClient
 }
 
 func (r redisStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
