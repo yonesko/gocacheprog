@@ -65,7 +65,7 @@ func (r redisStorage) get(ctx context.Context, key string) (io.Reader, meta, boo
 		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w", err)
 	}
 	var m meta
-	err = json.Unmarshal(must(bodyGet.Bytes()), &m)
+	err = json.Unmarshal(must(metaGet.Bytes()), &m)
 	if err != nil {
 		return nil, meta{}, false, fmt.Errorf("redis metaGet Unmarshal error: %w", err)
 	}
