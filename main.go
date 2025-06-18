@@ -65,12 +65,10 @@ func main() {
 	storage := NewStat(NewDecoratorStorage(
 		NewFileSystemStorage(*dir),
 		NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: []string{"10.0.4.153:7000",
-				"10.0.4.154:7000",
-				"10.0.4.155:7000",
-				"10.0.4.153:7001",
-				"10.0.4.154:7001",
-				"10.0.4.155:7001",
+			Addrs: []string{
+				"legacy-keydb-cache-dev01.int.tsum.com",
+				"legacy-keydb-cache-dev02.int.tsum.com",
+				"legacy-keydb-cache-dev03.int.tsum.com",
 			},
 			ClientName: "gocacheprog",
 			Username:   *redisUser,
