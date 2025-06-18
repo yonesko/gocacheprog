@@ -12,16 +12,18 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 var (
-	logResponse             = flag.Bool("log-resp", false, "log responses")
-	logRequest              = flag.Bool("log-req", false, "log requests")
-	dir                     = flag.String("dir", "", "dir of cache")
-	redisUser               = flag.String("r-usr", "", "redis user")
-	redisPassword           = flag.String("r-pwd", "", "redis password")
-	inputReader   io.Reader = os.Stdin
-	outputWriter  io.Writer = os.Stdout
+	logResponse              = flag.Bool("log-resp", false, "log responses")
+	logRequest               = flag.Bool("log-req", false, "log requests")
+	dir                      = flag.String("dir", "", "dir of cache")
+	redisUser                = flag.String("r-usr", "", "redis user")
+	redisPassword            = flag.String("r-pwd", "", "redis password")
+	redisAddresses           = flag.String("r-urls", "", "comma separated redis addresses")
+	inputReader    io.Reader = os.Stdin
+	outputWriter   io.Writer = os.Stdout
 )
 
 type (
@@ -65,11 +67,7 @@ func main() {
 	storage := NewStat(NewDecoratorStorage(
 		NewFileSystemStorage(*dir),
 		NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: []string{
-				"legacy-keydb-cache-dev01.int.tsum.com",
-				"legacy-keydb-cache-dev02.int.tsum.com",
-				"legacy-keydb-cache-dev03.int.tsum.com",
-			},
+			Addrs:      strings.Split(*redisAddresses, ","),
 			ClientName: "gocacheprog",
 			Username:   *redisUser,
 			Password:   *redisPassword,
