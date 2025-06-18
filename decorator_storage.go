@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 )
 
 // use one storage to save to disk and one to the external storage
@@ -58,15 +57,16 @@ func (s decoratorStorage) Put(ctx context.Context, request PutRequest) (string, 
 		return "", fmt.Errorf("could not store response: %w", err)
 	}
 	//TODO make concurrent
-	//buffer.
-	io.Copy(os.Stdout, buffer)
 	buffer.Seek(0, io.SeekStart)
-	s.externalStorage.Put(ctx, PutRequest{
+	_, err = s.externalStorage.Put(ctx, PutRequest{
 		Key:      request.Key,
 		OutputID: request.OutputID,
 		Body:     buffer,
 		BodySize: request.BodySize,
 	})
+	if err != nil {
+		return "", fmt.Errorf("could not store external response: %w", err)
+	}
 	return diskPath, nil
 }
 
