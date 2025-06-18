@@ -8,17 +8,20 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
 	"os"
 )
 
 var (
-	logResponse            = flag.Bool("log_resp", false, "log responses")
-	logRequest             = flag.Bool("log_req", false, "log requests")
-	dir                    = flag.String("dir", "", "dir of cache")
-	inputReader  io.Reader = os.Stdin
-	outputWriter io.Writer = os.Stdout
+	logResponse             = flag.Bool("log-resp", false, "log responses")
+	logRequest              = flag.Bool("log-req", false, "log requests")
+	dir                     = flag.String("dir", "", "dir of cache")
+	redisUser               = flag.String("r-usr", "", "redis user")
+	redisPassword           = flag.String("r-pwd", "", "redis password")
+	inputReader   io.Reader = os.Stdin
+	outputWriter  io.Writer = os.Stdout
 )
 
 type (
@@ -59,7 +62,21 @@ func main() {
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
 	ctx := context.Background()
-	storage := NewStat(NewFileSystemStorage(*dir))
+	storage := NewStat(NewDecoratorStorage(
+		NewFileSystemStorage(*dir),
+		NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{"10.0.4.153:7000",
+				"10.0.4.154:7000",
+				"10.0.4.155:7000",
+				"10.0.4.153:7001",
+				"10.0.4.154:7001",
+				"10.0.4.155:7001",
+			},
+			ClientName: "gocacheprog",
+			Username:   *redisUser,
+			Password:   *redisPassword,
+		})),
+	))
 	keyConverter := hex.EncodeToString
 	reader := json.NewDecoder(bufio.NewReader(inputReader))
 	for {
