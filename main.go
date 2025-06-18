@@ -22,6 +22,7 @@ var (
 	redisUser                = flag.String("r-usr", "", "redis user")
 	redisPassword            = flag.String("r-pwd", "", "redis password")
 	redisAddresses           = flag.String("r-urls", "", "comma separated redis addresses")
+	redisKeyPrefix           = flag.String("r-prefix", "", "env variable name with $ or just string to prefix redis cache keys")
 	inputReader    io.Reader = os.Stdin
 	outputWriter   io.Writer = os.Stdout
 )
@@ -66,12 +67,15 @@ func main() {
 	ctx := context.Background()
 	storage := NewStat(NewDecoratorStorage(
 		NewStat(NewFileSystemStorage(*dir)),
-		NewStat(NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:      strings.Split(*redisAddresses, ","),
-			ClientName: "gocacheprog",
-			Username:   *redisUser,
-			Password:   *redisPassword,
-		}))),
+		NewStat(NewRedisStorage(
+			redis.NewClusterClient(&redis.ClusterOptions{
+				Addrs:      strings.Split(*redisAddresses, ","),
+				ClientName: "gocacheprog",
+				Username:   *redisUser,
+				Password:   *redisPassword,
+			}),
+			*redisKeyPrefix,
+		)),
 	))
 	keyConverter := hex.EncodeToString
 	reader := json.NewDecoder(bufio.NewReader(inputReader))

@@ -23,7 +23,7 @@ func TestNewRedisStorage(t *testing.T) {
 		ClientName: "gocacheprog",
 		Username:   "gdanichev",
 		Password:   "",
-	}))
+	}), "")
 
 	const key = "bLqNioCWfF"
 	get, ok, err := storage.Get(context.Background(), key)

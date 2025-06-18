@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"io"
+	"path"
 	"strings"
 	"time"
 )
 
 type (
 	redisStorage struct {
-		cluster *redis.ClusterClient
+		cluster        *redis.ClusterClient
+		redisKeyPrefix string
 	}
 	meta struct {
 		OutputID []byte
@@ -22,8 +24,8 @@ type (
 	}
 )
 
-func NewRedisStorage(cluster *redis.ClusterClient) Storage {
-	return &redisStorage{cluster: cluster}
+func NewRedisStorage(cluster *redis.ClusterClient, redisKeyPrefix string) Storage {
+	return &redisStorage{cluster: cluster, redisKeyPrefix: strings.TrimSpace(redisKeyPrefix)}
 }
 
 func (r redisStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
@@ -102,7 +104,12 @@ func (r redisStorage) Close(_ context.Context) error {
 }
 
 func (r redisStorage) keyNames(key string) (keyBody, keyMeta string) {
-	key = "gocacheprog/" + key
+	parts := []string{"gocacheprog"}
+	if r.redisKeyPrefix != "" {
+		parts = append(parts, r.redisKeyPrefix)
+	}
+	parts = append(parts, key)
+	key = path.Join(parts...)
 	keyBody = key + "-o"
 	keyMeta = key + "-i"
 	return keyBody, keyMeta
