@@ -65,13 +65,13 @@ func main() {
 	//
 	ctx := context.Background()
 	storage := NewStat(NewDecoratorStorage(
-		NewFileSystemStorage(*dir),
-		NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
+		NewStat(NewFileSystemStorage(*dir)),
+		NewStat(NewRedisStorage(redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:      strings.Split(*redisAddresses, ","),
 			ClientName: "gocacheprog",
 			Username:   *redisUser,
 			Password:   *redisPassword,
-		})),
+		}))),
 	))
 	keyConverter := hex.EncodeToString
 	reader := json.NewDecoder(bufio.NewReader(inputReader))
