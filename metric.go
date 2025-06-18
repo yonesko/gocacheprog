@@ -27,6 +27,9 @@ type (
 		PutCmdMaxTime int64
 		GetCmdTimeSum int64
 		PutCmdTimeSum int64
+		PutMinSize    int64
+		PutMaxSize    int64
+		PutTotalSize  int64
 		Storage
 	}
 )
@@ -47,6 +50,9 @@ func NewStat(storage Storage) Storage {
 		PutCmdMaxTime: math.MinInt64,
 		GetCmdTimeSum: 0,
 		PutCmdTimeSum: 0,
+		PutMinSize:    math.MaxInt64,
+		PutMaxSize:    math.MinInt64,
+		PutTotalSize:  0,
 		Storage:       storage,
 	}
 }
@@ -79,6 +85,9 @@ func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
 	s.PutCmdTimeSum += elapsed
 	s.PutCmdMinTime = min(s.PutCmdMinTime, elapsed)
 	s.PutCmdMaxTime = max(s.PutCmdMaxTime, elapsed)
+	s.PutMaxSize = max(s.PutMaxSize, request.BodySize)
+	s.PutMinSize = min(s.PutMinSize, request.BodySize)
+	s.PutTotalSize += request.BodySize
 	return path, err
 }
 
@@ -107,6 +116,11 @@ func (s *metrics) Close(ctx context.Context) error {
 		"put max time:%s",
 		"put avg time:%s",
 		"put sum time:%s",
+
+		"put min size:%s",
+		"put avg size:%s",
+		"put max size:%s",
+		"put sum size:%s",
 	}, "\n")+"\n",
 		s.DecoratedName,
 		s.GetCmd,
@@ -124,6 +138,24 @@ func (s *metrics) Close(ctx context.Context) error {
 		time.Duration(s.PutCmdMaxTime),
 		time.Duration(s.PutCmdAvgTime),
 		time.Duration(s.PutCmdTimeSum),
+
+		humanSize(s.PutMinSize),
+		humanSize(s.PutTotalSize/s.PutCmd),
+		humanSize(s.PutMaxSize),
+		humanSize(s.PutTotalSize),
 	)
 	return err
+}
+
+func humanSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
