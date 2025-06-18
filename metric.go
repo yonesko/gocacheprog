@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 type (
 	metrics struct {
+		DecoratedName string
 		GetCmd        int64
 		GetMissCmd    int64
 		PutCmd        int64
@@ -31,6 +33,7 @@ type (
 
 func NewStat(storage Storage) Storage {
 	return &metrics{
+		DecoratedName: reflect.TypeOf(storage).String(),
 		GetCmd:        0,
 		GetMissCmd:    0,
 		PutCmd:        0,
@@ -88,6 +91,7 @@ func (s *metrics) Close(ctx context.Context) error {
 	s.PutCmdAvgTime = s.PutCmdTimeSum / s.PutCmd
 	s.GetCmdAvgTime = s.GetCmdTimeSum / s.GetCmd
 	fmt.Fprintf(os.Stderr, strings.Join([]string{
+		"measured:%s",
 		"gets:%d",
 		"gets_miss:%d",
 		"puts:%d",
@@ -104,6 +108,7 @@ func (s *metrics) Close(ctx context.Context) error {
 		"put avg time:%s",
 		"put sum time:%s",
 	}, "\n")+"\n",
+		s.DecoratedName,
 		s.GetCmd,
 		s.GetMissCmd,
 		s.PutCmd,
