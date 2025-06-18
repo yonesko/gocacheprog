@@ -2,30 +2,30 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 )
 
 type (
 	metrics struct {
-		GetCmd        int64         `json:"gets"`
-		GetMissCmd    int64         `json:"gets_miss"`
-		PutCmd        int64         `json:"puts"`
-		CloseCmd      int64         `json:"close"`
-		Errors        int64         `json:"errors"`
-		GetCmdMinTime time.Duration `json:"getCmdMinTime"`
-		GetCmdAvgTime int64         `json:"getCmdAvgTime"`
-		GetCmdMaxTime time.Duration `json:"getCmdMaxTime"`
-		PutCmdMinTime time.Duration `json:"putCmdMinTime"`
-		PutCmdAvgTime int64         `json:"putCmdAvgTime"`
-		PutCmdMaxTime time.Duration `json:"putCmdMaxTime"`
-		GetCmdTimeSum time.Duration `json:"-"`
-		PutCmdTimeSum time.Duration `json:"-"`
-		Storage       `json:"-"`
+		GetCmd        int64
+		GetMissCmd    int64
+		PutCmd        int64
+		CloseCmd      int64
+		Errors        int64
+		GetCmdMinTime int64
+		GetCmdAvgTime int64
+		GetCmdMaxTime int64
+		PutCmdMinTime int64
+		PutCmdAvgTime int64
+		PutCmdMaxTime int64
+		GetCmdTimeSum int64
+		PutCmdTimeSum int64
+		Storage
 	}
 )
 
@@ -58,10 +58,10 @@ func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error
 	if err != nil {
 		atomic.AddInt64(&s.Errors, 1)
 	}
-	elapsed := time.Since(now)
+	elapsed := int64(time.Since(now))
 	s.GetCmdTimeSum += elapsed
 	s.GetCmdMinTime = min(s.GetCmdMinTime, elapsed)
-	s.GetCmdMaxTime = min(s.GetCmdMaxTime, elapsed)
+	s.GetCmdMaxTime = max(s.GetCmdMaxTime, elapsed)
 	return entry, ok, err
 }
 
@@ -72,10 +72,10 @@ func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
 	if err != nil {
 		atomic.AddInt64(&s.Errors, 1)
 	}
-	elapsed := time.Since(now)
+	elapsed := int64(time.Since(now))
 	s.PutCmdTimeSum += elapsed
 	s.PutCmdMinTime = min(s.PutCmdMinTime, elapsed)
-	s.PutCmdMaxTime = min(s.PutCmdMaxTime, elapsed)
+	s.PutCmdMaxTime = max(s.PutCmdMaxTime, elapsed)
 	return path, err
 }
 
@@ -85,8 +85,40 @@ func (s *metrics) Close(ctx context.Context) error {
 	if err != nil {
 		atomic.AddInt64(&s.Errors, 1)
 	}
-	s.PutCmdAvgTime = int64(s.PutCmdTimeSum) / s.PutCmd
-	s.GetCmdAvgTime = int64(s.GetCmdAvgTime) / s.GetCmd
-	fmt.Fprintln(os.Stderr, string(must(json.Marshal(s))))
+	s.PutCmdAvgTime = s.PutCmdTimeSum / s.PutCmd
+	s.GetCmdAvgTime = s.GetCmdTimeSum / s.GetCmd
+	fmt.Fprintf(os.Stderr, strings.Join([]string{
+		"gets:%d",
+		"gets_miss:%d",
+		"puts:%d",
+		"close:%d",
+		"errors:%d",
+
+		"get min time:%s",
+		"get max time:%s",
+		"get avg time:%s",
+		"get sum time:%s",
+
+		"put min time:%s",
+		"put max time:%s",
+		"put avg time:%s",
+		"put sum time:%s",
+	}, "\n")+"\n",
+		s.GetCmd,
+		s.GetMissCmd,
+		s.PutCmd,
+		s.CloseCmd,
+		s.Errors,
+
+		time.Duration(s.GetCmdMinTime),
+		time.Duration(s.GetCmdMaxTime),
+		time.Duration(s.GetCmdAvgTime),
+		time.Duration(s.GetCmdTimeSum),
+
+		time.Duration(s.PutCmdMinTime),
+		time.Duration(s.PutCmdMaxTime),
+		time.Duration(s.PutCmdAvgTime),
+		time.Duration(s.PutCmdTimeSum),
+	)
 	return err
 }

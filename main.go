@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
 	"os"
@@ -44,25 +43,7 @@ type (
 	}
 )
 
-func connectCluster() *redis.ClusterClient {
-	rdb := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs: []string{
-			"10.0.4.153:7000",
-			"10.0.4.154:7000",
-			"10.0.4.155:7000",
-		},
-	})
-
-	// Ping to confirm connection
-	if err := rdb.Ping(context.Background()).Err(); err != nil {
-		log.Fatalf("Could not connect to Redis Cluster: %v", err)
-	}
-
-	return rdb
-}
-
 func main() {
-	connectCluster()
 	flag.Parse()
 	if *dir == "" {
 		flag.Usage()
