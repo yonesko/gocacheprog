@@ -22,7 +22,7 @@ var (
 	redisUser                = flag.String("r-usr", "", "redis user")
 	redisPassword            = flag.String("r-pwd", "", "redis password")
 	redisAddresses           = flag.String("r-urls", "", "comma separated redis addresses")
-	redisKeyPrefix           = flag.String("r-prefix", "", "env variable name with $ or just string to prefix redis cache keys")
+	redisKeyPrefix           = flag.String("r-prefix", "", "string to prefix redis cache keys")
 	inputReader    io.Reader = os.Stdin
 	outputWriter   io.Writer = os.Stdout
 )
