@@ -97,8 +97,8 @@ func (s *metrics) Close(ctx context.Context) error {
 	if err != nil {
 		atomic.AddInt64(&s.Errors, 1)
 	}
-	s.PutCmdAvgTime = s.PutCmdTimeSum / s.PutCmd
-	s.GetCmdAvgTime = s.GetCmdTimeSum / s.GetCmd
+	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
+	s.GetCmdAvgTime = safeDiv(s.GetCmdTimeSum, s.GetCmd)
 	fmt.Fprintf(os.Stderr, strings.Join([]string{
 		"measured:%s",
 		"gets:%d",
@@ -140,7 +140,7 @@ func (s *metrics) Close(ctx context.Context) error {
 		time.Duration(s.PutCmdTimeSum),
 
 		humanSize(s.PutMinSize),
-		humanSize(s.PutTotalSize/s.PutCmd),
+		humanSize(safeDiv(s.PutTotalSize, s.PutCmd)),
 		humanSize(s.PutMaxSize),
 		humanSize(s.PutTotalSize),
 	)
@@ -158,4 +158,11 @@ func humanSize(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+func safeDiv(a, b int64) int64 {
+	if b == 0 {
+		return -1
+	}
+	return a / b
 }
