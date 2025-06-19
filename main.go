@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"flag"
 	"github.com/redis/go-redis/v9"
 	"io"
@@ -16,16 +12,14 @@ import (
 )
 
 var (
-	logResponse              = flag.Bool("log-resp", false, "log responses")
-	logRequest               = flag.Bool("log-req", false, "log requests")
-	logMetrics               = flag.Bool("log-metrics", false, "log metrics")
-	dir                      = flag.String("dir", "", "dir of cache")
-	redisUser                = flag.String("r-usr", "", "redis user")
-	redisPassword            = flag.String("r-pwd", "", "redis password")
-	redisAddresses           = flag.String("r-urls", "", "comma separated redis addresses")
-	redisKeyPrefix           = flag.String("r-prefix", "", "string to prefix redis cache keys")
-	inputReader    io.Reader = os.Stdin
-	outputWriter   io.Writer = os.Stdout
+	logResponse    = flag.Bool("log-resp", false, "log responses")
+	logRequest     = flag.Bool("log-req", false, "log requests")
+	logMetrics     = flag.Bool("log-metrics", false, "log metrics")
+	dir            = flag.String("dir", "", "local dir of cache")
+	redisUser      = flag.String("r-usr", "", "redis user")
+	redisPassword  = flag.String("r-pwd", "", "redis password")
+	redisAddresses = flag.String("r-urls", "", "comma separated redis addresses")
+	redisKeyPrefix = flag.String("r-prefix", "", "string to prefix redis cache keys")
 )
 
 type (
@@ -56,67 +50,17 @@ func main() {
 		flag.Usage()
 		log.Fatal("dir is required")
 	}
+	var inputReader io.Reader = os.Stdin
+	var outputWriter io.Writer = os.Stdout
 	if *logResponse {
-		outputWriter = newLoggingWriter(os.Stdout)
+		outputWriter = newLoggingWriter(outputWriter)
 	}
 	if *logRequest {
-		inputReader = newLoggingReader(os.Stdin)
+		inputReader = newLoggingReader(inputReader)
 	}
 	ctx := context.Background()
-	storage := buildStorage()
-	keyConverter := hex.EncodeToString
-	reader := json.NewDecoder(bufio.NewReader(inputReader))
-	//handshake
-	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
-	//
-	for {
-		var request Request
-		if err := reader.Decode(&request); err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			panic(err)
-		}
-		if request.Command == CmdPut {
-			if request.BodySize > 0 {
-				//TODO stream
-				var body []byte
-				err := reader.Decode(&body)
-				if err != nil {
-					resp(Response{ID: request.ID}, err)
-					continue
-				}
-				request.Body = bytes.NewReader(body)
-			} else {
-				request.Body = bytes.NewBuffer(nil)
-			}
-			diskPath, err := storage.Put(ctx, PutRequest{
-				Key:      keyConverter(request.ActionID),
-				OutputID: request.OutputID,
-				Body:     request.Body,
-				BodySize: request.BodySize,
-			})
-			resp(Response{ID: request.ID, DiskPath: diskPath}, err)
-			continue
-		}
-
-		if request.Command == CmdGet {
-			entry, ok, err := storage.Get(ctx, keyConverter(request.ActionID))
-			resp(Response{
-				ID:       request.ID,
-				Miss:     !ok,
-				DiskPath: entry.DiskPath,
-				OutputID: entry.OutputID,
-				Size:     entry.BodySize,
-			}, err)
-			continue
-		}
-		if request.Command == CmdClose {
-			err := storage.Close(ctx)
-			resp(Response{ID: request.ID}, err)
-			os.Exit(0)
-		}
-	}
+	NewApp(inputReader, outputWriter, hex.EncodeToString, buildStorage()).
+		Run(ctx)
 }
 
 func buildStorage() Storage {
@@ -152,13 +96,4 @@ func must0(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func resp(response Response, err error) {
-	if err != nil {
-		response.Err = err.Error()
-	}
-	b := must(json.Marshal(response))
-	must(outputWriter.Write(b))
-	must(outputWriter.Write([]byte{'\n'}))
 }
