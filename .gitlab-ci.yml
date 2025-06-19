@@ -39,6 +39,7 @@ unit-test-job: # This job runs in the test stage.
       variables:
         ALLOW_EMPTY_PASSWORD: yes
   script:
+    - go test ./...
     - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -r-urls=keydbhost:6379"
     - go build -o gocacheprog .
 

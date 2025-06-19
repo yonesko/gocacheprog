@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"strconv"
 	"strings"
@@ -16,18 +17,45 @@ import (
 )
 
 func TestApp_Run(t *testing.T) {
-	buffer := &bytes.Buffer{}
-	app := NewApp(
-		marshalCmds(
-			Request{ID: 1, Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 5, Body: strings.NewReader(must(randomString(5)))},
-			Request{ID: 2, Command: CmdPut, ActionID: []byte("ActionID_2"), OutputID: []byte("OutputID_2"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
-		),
-		buffer,
-		hex.EncodeToString,
-		NewFileSystemStorage(t.TempDir()),
-	)
-	app.Run(context.Background())
-	fmt.Println(buffer.String())
+	t.Run("regular", func(t *testing.T) {
+		buffer := &bytes.Buffer{}
+		app := NewApp(
+			marshalCmds(
+				Request{ID: 1, Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 5, Body: strings.NewReader(must(randomString(5)))},
+				Request{ID: 2, Command: CmdPut, ActionID: []byte("ActionID_2"), OutputID: []byte("OutputID_2"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
+			),
+			buffer,
+			hex.EncodeToString,
+			NewFileSystemStorage(t.TempDir()),
+		)
+		app.Run(context.Background())
+		fmt.Println(buffer.String())
+	})
+	t.Run("parallel get and put of the same file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		buffer := &bytes.Buffer{}
+		for range 100 {
+			app := NewApp(
+				marshalCmds(
+					Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
+					Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
+				),
+				buffer,
+				hex.EncodeToString,
+				NewFileSystemStorage(tempDir),
+			)
+			app.Run(context.Background())
+			decoder := json.NewDecoder(buffer)
+			var resp Response
+			err := decoder.Decode(&resp)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if resp.Err != "" {
+				log.Fatal(resp.Err, tempDir)
+			}
+		}
+	})
 }
 
 /*
