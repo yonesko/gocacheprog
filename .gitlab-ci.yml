@@ -26,9 +26,12 @@ build-job: # This job runs in the build stage, which runs first.
   stage: build
   script:
     - go build -o gocacheprog .
+  artifacts:
+    paths:
+      - gocacheprog
 
 unit-test-job: # This job runs in the test stage.
-  image: repo.int.tsum.com/md/golang:v1.24.1
+  image: repo.int.tsum.com/tsum/core/golang:1.24.1
   stage: test    # It only starts when the job in the build stage completes successfully.
   services:
     - name: repo.int.tsum.com:443/tsum/core/bitnami/keydb:6.3.4
@@ -36,7 +39,7 @@ unit-test-job: # This job runs in the test stage.
       variables:
         ALLOW_EMPTY_PASSWORD: yes
   script:
-    - export GOCACHEPROG="gocacheprog -dir=$(mktemp -d) -log-resp -r-urls=keydbhost:6379"
+    - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-resp -r-urls=keydbhost:6379"
     - go build -o gocacheprog .
 
 .build_docker: &docker_build_template
