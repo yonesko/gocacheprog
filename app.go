@@ -76,12 +76,12 @@ func (a App) Run(ctx context.Context) {
 			continue
 		}
 		if request.Command == CmdClose {
+			waitGroup.Wait()
 			err := a.storage.Close(ctx)
 			a.resp(Response{ID: request.ID}, err)
 			break
 		}
 	}
-	waitGroup.Wait()
 }
 
 func (a App) resp(response Response, err error) {
