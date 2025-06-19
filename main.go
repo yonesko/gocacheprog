@@ -101,13 +101,13 @@ func buildStorage() Storage {
 		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", err)
 		return withMetrics(NewFileSystemStorage(*dir))
 	}
-	return withMetrics(NewDecoratorStorage(
+	return NewLogStorage(withMetrics(NewDecoratorStorage(
 		withMetrics(NewFileSystemStorage(*dir)),
 		withMetrics(NewRedisStorage(
 			client,
 			*redisKeyPrefix,
 		)),
-	))
+	)))
 }
 
 func must[T any](t T, err error) T {
