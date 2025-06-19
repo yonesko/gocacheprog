@@ -36,7 +36,7 @@ unit-test-job: # This job runs in the test stage.
       variables:
         ALLOW_EMPTY_PASSWORD: yes
   script:
-    - export GOCACHEPROG="gocacheprog -dir=$(mktemp -d) -r-urls=keydbhost:6379"
+    - export GOCACHEPROG="gocacheprog -dir=$(mktemp -d) -log-resp -r-urls=keydbhost:6379"
     - go build -o gocacheprog .
 
 .build_docker: &docker_build_template
