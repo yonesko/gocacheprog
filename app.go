@@ -18,7 +18,7 @@ type (
 	}
 )
 
-func (a App) Run(ctx context.Context) error {
+func (a App) Run(ctx context.Context) {
 	reader := json.NewDecoder(bufio.NewReader(a.inputReader))
 	//handshake
 	a.resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
@@ -71,7 +71,6 @@ func (a App) Run(ctx context.Context) error {
 			break
 		}
 	}
-	return nil
 }
 
 func (a App) resp(response Response, err error) {
