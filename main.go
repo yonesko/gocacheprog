@@ -18,6 +18,7 @@ import (
 var (
 	logResponse              = flag.Bool("log-resp", false, "log responses")
 	logRequest               = flag.Bool("log-req", false, "log requests")
+	logMetrics               = flag.Bool("log-metrics", false, "log metrics")
 	dir                      = flag.String("dir", "", "dir of cache")
 	redisUser                = flag.String("r-usr", "", "redis user")
 	redisPassword            = flag.String("r-pwd", "", "redis password")
@@ -61,24 +62,13 @@ func main() {
 	if *logRequest {
 		inputReader = newLoggingReader(os.Stdin)
 	}
+	ctx := context.Background()
+	storage := buildStorage()
+	keyConverter := hex.EncodeToString
+	reader := json.NewDecoder(bufio.NewReader(inputReader))
 	//handshake
 	resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
-	ctx := context.Background()
-	storage := NewStat(NewDecoratorStorage(
-		NewStat(NewFileSystemStorage(*dir)),
-		NewStat(NewRedisStorage(
-			redis.NewClusterClient(&redis.ClusterOptions{
-				Addrs:      strings.Split(*redisAddresses, ","),
-				ClientName: "gocacheprog",
-				Username:   *redisUser,
-				Password:   *redisPassword,
-			}),
-			*redisKeyPrefix,
-		)),
-	))
-	keyConverter := hex.EncodeToString
-	reader := json.NewDecoder(bufio.NewReader(inputReader))
 	for {
 		var request Request
 		if err := reader.Decode(&request); err != nil {
@@ -127,6 +117,28 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+func buildStorage() Storage {
+	withMetrics := func(s Storage) Storage {
+		if *logMetrics {
+			return NewMetricsStorage(s)
+		}
+		return s
+	}
+
+	return withMetrics(NewDecoratorStorage(
+		withMetrics(NewFileSystemStorage(*dir)),
+		withMetrics(NewRedisStorage(
+			redis.NewClusterClient(&redis.ClusterOptions{
+				Addrs:      strings.Split(*redisAddresses, ","),
+				ClientName: "gocacheprog",
+				Username:   *redisUser,
+				Password:   *redisPassword,
+			}),
+			*redisKeyPrefix,
+		)),
+	))
 }
 
 func must[T any](t T, err error) T {

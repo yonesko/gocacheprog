@@ -34,7 +34,7 @@ type (
 	}
 )
 
-func NewStat(storage Storage) Storage {
+func NewMetricsStorage(storage Storage) Storage {
 	return &metrics{
 		DecoratedName: reflect.TypeOf(storage).String(),
 		GetCmd:        0,
