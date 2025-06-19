@@ -4,4 +4,3 @@ WORKDIR /app
 COPY . .
 RUN go build -o /usr/local/go/bin/gocacheprog .
 
-ENTRYPOINT ["bash"]
