@@ -55,7 +55,7 @@ unit-test-job: # This job runs in the test stage.
 deploy-job: # This job runs in the deploy stage.
   <<: *docker_build_template
   variables:
-    IMAGE: repo.int.tsum.com/md/gocacheprog
+    IMAGE: repo.int.tsum.com/md/golang:1.24.1
     TAG: v1.0.0
     DOCKERFILE: Dockerfile
 
