@@ -56,7 +56,7 @@ func (r redisStorage) get(ctx context.Context, key string) (io.Reader, meta, boo
 		return nil, meta{}, false, nil
 	}
 	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis bodyGet error: %w", err)
+		return nil, meta{}, false, fmt.Errorf("redis bodyGet error: %w %s", err, key)
 	}
 	metaGet := r.cluster.Get(ctx, keyMeta)
 	err = metaGet.Err()
@@ -64,16 +64,20 @@ func (r redisStorage) get(ctx context.Context, key string) (io.Reader, meta, boo
 		return nil, meta{}, false, nil
 	}
 	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w", err)
+		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w %s", err, key)
 	}
 	var m meta
-	err = json.Unmarshal(must(metaGet.Bytes()), &m)
+	metaBytes, err := metaGet.Bytes()
 	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis metaGet Unmarshal error: %w", err)
+		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w %s", err, key)
+	}
+	err = json.Unmarshal(metaBytes, &m)
+	if err != nil {
+		return nil, meta{}, false, fmt.Errorf("redis metaGet Unmarshal error: %w %s", err, key)
 	}
 	b, err := bodyGet.Bytes()
 	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis bodyGet Bytes error: %w", err)
+		return nil, meta{}, false, fmt.Errorf("redis bodyGet Bytes error: %w %s", err, key)
 	}
 	return bytes.NewReader(b), m, true, nil
 }
@@ -83,17 +87,21 @@ func (r redisStorage) Put(ctx context.Context, request PutRequest) (string, erro
 	keyBody, keyMeta := r.keyNames(request.Key)
 	b, err := io.ReadAll(request.Body)
 	if err != nil {
-		return "", fmt.Errorf("redis bodyReadAll error: %w", err)
+		return "", fmt.Errorf("redis bodyReadAll error: %w %s", err, request.Key)
 	}
 	set := r.cluster.Set(ctx, keyBody, b, expiration)
 	err = set.Err()
 	if err != nil {
-		return "", fmt.Errorf("redis set error: %w", err)
+		return "", fmt.Errorf("redis set error: %w %s", err, request.Key)
 	}
-	set = r.cluster.Set(ctx, keyMeta, must(json.Marshal(meta{OutputID: request.OutputID, Size: request.BodySize})), expiration)
+	metaBytes, err := json.Marshal(meta{OutputID: request.OutputID, Size: request.BodySize})
+	if err != nil {
+		return "", fmt.Errorf("redis metaMarshal error: %w %s", err, request.Key)
+	}
+	set = r.cluster.Set(ctx, keyMeta, metaBytes, expiration)
 	err = set.Err()
 	if err != nil {
-		return "", fmt.Errorf("redis set error: %w", err)
+		return "", fmt.Errorf("redis set error: %w %s", err, request.Key)
 	}
 	//no disk path to return
 	return "", nil

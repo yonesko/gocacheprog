@@ -91,7 +91,11 @@ func main() {
 			if request.BodySize > 0 {
 				//TODO stream
 				var body []byte
-				must0(reader.Decode(&body))
+				err := reader.Decode(&body)
+				if err != nil {
+					resp(Response{ID: request.ID}, err)
+					continue
+				}
 				request.Body = bytes.NewReader(body)
 			} else {
 				request.Body = bytes.NewBuffer(nil)

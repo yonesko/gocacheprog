@@ -30,9 +30,20 @@ func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bo
 	diskPathBody, diskPathIndex := f.fileNames(key)
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		var ind index
-		must0(json.Unmarshal(must(os.ReadFile(diskPathIndex)), &ind))
-		diskPathBody = must(filepath.Abs(diskPathBody))
-		return GetResponse{OutputID: ind.OutputID, DiskPath: diskPathBody, BodySize: ind.Size}, true, nil
+		fileIndex, err := os.Open(diskPathIndex)
+		if err != nil {
+			return GetResponse{}, false, fmt.Errorf("error opening index file %s: %w", key, err)
+		}
+		err = json.NewDecoder(fileIndex).Decode(&ind)
+		if err != nil {
+			return GetResponse{}, false, fmt.Errorf("failed to unmarshal file %s: %w", key, err)
+		}
+
+		absDiskPathBody, err := filepath.Abs(diskPathBody)
+		if err != nil {
+			return GetResponse{}, false, fmt.Errorf("failed to determine absolute path for %s: %w", key, err)
+		}
+		return GetResponse{OutputID: ind.OutputID, DiskPath: absDiskPathBody, BodySize: ind.Size}, true, nil
 	}
 	return GetResponse{}, false, nil
 }
@@ -56,19 +67,35 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 		return "", errors.New("empty key")
 	}
 	diskPathBody, diskPathIndex := f.fileNames(request.Key)
-	bodyFile := must(os.Create(diskPathBody))
-	indexFile := must(os.Create(diskPathIndex))
-	defer bodyFile.Close()
-	defer indexFile.Close()
-	written := must(io.Copy(bodyFile, request.Body))
-	must(indexFile.Write(must(json.Marshal(index{
+	fileBody, err := os.Create(diskPathBody)
+	if err != nil {
+		return "", fmt.Errorf("error creating file %s: %w", request.Key, err)
+	}
+	defer fileBody.Close()
+	fileIndex, err := os.Create(diskPathIndex)
+	if err != nil {
+		return "", fmt.Errorf("error creating file %s: %w", request.Key, err)
+	}
+	defer fileIndex.Close()
+	written, err := io.Copy(fileBody, request.Body)
+	if err != nil {
+		return "", fmt.Errorf("error writing file %s: %w", request.Key, err)
+	}
+	indexBytes, err := json.Marshal(index{
 		OutputID: request.OutputID,
 		Size:     request.BodySize,
-	}))))
-	if written != request.BodySize {
-		return "", fmt.Errorf("file %q size mismatch: %d != %d", diskPathBody, written, request.BodySize)
+	})
+	if err != nil {
+		return "", fmt.Errorf("error marshalling index: %w %s", err, request.Key)
 	}
-	return must(filepath.Abs(diskPathBody)), nil
+	_, err = fileIndex.Write(indexBytes)
+	if err != nil {
+		return "", fmt.Errorf("error writing index: %w %s", err, request.Key)
+	}
+	if written != request.BodySize {
+		return "", fmt.Errorf("file %s size mismatch: %d != %d", request.Key, written, request.BodySize)
+	}
+	return filepath.Abs(diskPathBody)
 }
 
 func (f fileSystemStorage) Close(ctx context.Context) error {

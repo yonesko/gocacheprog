@@ -50,18 +50,20 @@ func (s decoratorStorage) Get(ctx context.Context, key string) (GetResponse, boo
 
 func (s decoratorStorage) Put(ctx context.Context, request PutRequest) (string, error) {
 	//TODO use Tee
-	buffer := bytes.NewReader(must(io.ReadAll(request.Body)))
-	request.Body = buffer
+	bodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		return "", fmt.Errorf("could not read body: %w", err)
+	}
+	request.Body = bytes.NewReader(bodyBytes)
 	diskPath, err := s.diskStorage.Put(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("could not store response: %w", err)
 	}
 	//TODO make concurrent
-	buffer.Seek(0, io.SeekStart)
 	_, err = s.externalStorage.Put(ctx, PutRequest{
 		Key:      request.Key,
 		OutputID: request.OutputID,
-		Body:     buffer,
+		Body:     bytes.NewReader(bodyBytes),
 		BodySize: request.BodySize,
 	})
 	if err != nil {
