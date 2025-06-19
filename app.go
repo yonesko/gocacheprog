@@ -46,13 +46,17 @@ func (a App) Run(ctx context.Context) {
 			} else {
 				request.Body = bytes.NewBuffer(nil)
 			}
-			diskPath, err := a.storage.Put(ctx, PutRequest{
-				Key:      a.keyConverter(request.ActionID),
-				OutputID: request.OutputID,
-				Body:     request.Body,
-				BodySize: request.BodySize,
-			})
-			a.resp(Response{ID: request.ID, DiskPath: diskPath}, err)
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
+				diskPath, err := a.storage.Put(ctx, PutRequest{
+					Key:      a.keyConverter(request.ActionID),
+					OutputID: request.OutputID,
+					Body:     request.Body,
+					BodySize: request.BodySize,
+				})
+				a.resp(Response{ID: request.ID, DiskPath: diskPath}, err)
+			}()
 			continue
 		}
 
