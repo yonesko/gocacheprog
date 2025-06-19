@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"sync"
 )
 
 type (
@@ -19,6 +20,7 @@ type (
 )
 
 func (a App) Run(ctx context.Context) {
+	waitGroup := sync.WaitGroup{}
 	reader := json.NewDecoder(bufio.NewReader(a.inputReader))
 	//handshake
 	a.resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
@@ -55,14 +57,18 @@ func (a App) Run(ctx context.Context) {
 		}
 
 		if request.Command == CmdGet {
-			entry, ok, err := a.storage.Get(ctx, a.keyConverter(request.ActionID))
-			a.resp(Response{
-				ID:       request.ID,
-				Miss:     !ok,
-				DiskPath: entry.DiskPath,
-				OutputID: entry.OutputID,
-				Size:     entry.BodySize,
-			}, err)
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
+				entry, ok, err := a.storage.Get(ctx, a.keyConverter(request.ActionID))
+				a.resp(Response{
+					ID:       request.ID,
+					Miss:     !ok,
+					DiskPath: entry.DiskPath,
+					OutputID: entry.OutputID,
+					Size:     entry.BodySize,
+				}, err)
+			}()
 			continue
 		}
 		if request.Command == CmdClose {
@@ -71,6 +77,7 @@ func (a App) Run(ctx context.Context) {
 			break
 		}
 	}
+	waitGroup.Wait()
 }
 
 func (a App) resp(response Response, err error) {
