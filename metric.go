@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -30,6 +31,7 @@ type (
 		PutMinSize    int64
 		PutMaxSize    int64
 		PutTotalSize  int64
+		sync.Mutex
 		Storage
 	}
 )
@@ -58,6 +60,8 @@ func NewMetricsStorage(storage Storage) Storage {
 }
 
 func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error) {
+	s.Lock()
+	defer s.Unlock()
 	atomic.AddInt64(&s.GetCmd, 1)
 	now := time.Now()
 	entry, ok, err := s.Storage.Get(ctx, key)
@@ -75,6 +79,8 @@ func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error
 }
 
 func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
+	s.Lock()
+	defer s.Unlock()
 	atomic.AddInt64(&s.PutCmd, 1)
 	now := time.Now()
 	path, err := s.Storage.Put(ctx, request)
@@ -92,6 +98,8 @@ func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
 }
 
 func (s *metrics) Close(ctx context.Context) error {
+	s.Lock()
+	defer s.Unlock()
 	err := s.Storage.Close(ctx)
 	atomic.AddInt64(&s.CloseCmd, 1)
 	if err != nil {
