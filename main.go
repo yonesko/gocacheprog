@@ -72,15 +72,33 @@ func buildStorage() Storage {
 		return s
 	}
 
-	client := redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:      strings.Split(*redisAddresses, ","),
-		ClientName: "gocacheprog",
-		Username:   *redisUser,
-		Password:   *redisPassword,
-	})
-	ping := client.Ping(context.Background())
-	if ping.Err() != nil {
-		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", ping.Err().Error())
+	client, err := func() (redis.UniversalClient, error) {
+		client := redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:      strings.Split(*redisAddresses, ","),
+			ClientName: "gocacheprog",
+			Username:   *redisUser,
+			Password:   *redisPassword,
+		})
+		err := client.Ping(context.Background()).Err()
+		if err != nil && err.Error() == "ERR This instance has cluster support disabled" {
+			split := strings.Split(*redisAddresses, ",")
+			if len(split) != 1 {
+				return nil, fmt.Errorf("invalid redis address count: %s", *redisAddresses)
+			}
+			return redis.NewClient(&redis.Options{
+				Addr:       split[0],
+				ClientName: "gocacheprog",
+				Username:   *redisUser,
+				Password:   *redisPassword,
+			}), nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	}()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", err)
 		return withMetrics(NewFileSystemStorage(*dir))
 	}
 	return withMetrics(NewDecoratorStorage(
