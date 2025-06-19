@@ -47,7 +47,6 @@ unit-test-job: # This job runs in the test stage.
     - echo "{\"auths\":{\"repo.int.tsum.com\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   script:
     - /kaniko/executor --context . --dockerfile $DOCKERFILE --destination $IMAGE:$TAG --cache=true
-  when: always
   only:
     refs:
       - main
