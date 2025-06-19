@@ -30,8 +30,11 @@ build-job: # This job runs in the build stage, which runs first.
 unit-test-job: # This job runs in the test stage.
   image: repo.int.tsum.com/md/golang:v1.24.1
   stage: test    # It only starts when the job in the build stage completes successfully.
+  services:
+    - name: repo.int.tsum.com:443/tsum/core/bitnami/keydb:6.3.4
+      alias: keydb
   script:
-    - export GOCACHEPROG="gocacheprog -dir=$(go env GOCACHE) -r-prefix=$CI_PROJECT_PATH -r-usr=gdanichev -r-pwd=$REDIS_PWD_GOCACHEPROG -r-urls=legacy-keydb-cache-dev01.int.tsum.com:7000"
+    - export GOCACHEPROG="gocacheprog -dir=$(mktemp -d) -r-urls=keydb:6379"
     - go build -o gocacheprog .
 
 .build_docker: &docker_build_template
