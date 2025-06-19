@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
@@ -71,15 +72,21 @@ func buildStorage() Storage {
 		return s
 	}
 
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      strings.Split(*redisAddresses, ","),
+		ClientName: "gocacheprog",
+		Username:   *redisUser,
+		Password:   *redisPassword,
+	})
+	ping := client.Ping(context.Background())
+	if ping.Err() != nil {
+		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", ping.Err().Error())
+		return withMetrics(NewFileSystemStorage(*dir))
+	}
 	return withMetrics(NewDecoratorStorage(
 		withMetrics(NewFileSystemStorage(*dir)),
 		withMetrics(NewRedisStorage(
-			redis.NewClusterClient(&redis.ClusterOptions{
-				Addrs:      strings.Split(*redisAddresses, ","),
-				ClientName: "gocacheprog",
-				Username:   *redisUser,
-				Password:   *redisPassword,
-			}),
+			client,
 			*redisKeyPrefix,
 		)),
 	))
