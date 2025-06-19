@@ -72,7 +72,7 @@ func buildStorage() Storage {
 		return s
 	}
 
-	client := redis.NewClusterClient(&redis.ClusterOptions{
+	client := redis.NewUniversalClient(&redis.UniversalOptions{
 		Addrs:      strings.Split(*redisAddresses, ","),
 		ClientName: "gocacheprog",
 		Username:   *redisUser,

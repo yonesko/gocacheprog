@@ -15,7 +15,7 @@ import (
 
 type (
 	redisStorage struct {
-		cluster        *redis.ClusterClient
+		cluster        redis.UniversalClient
 		redisKeyPrefix string
 	}
 	meta struct {
@@ -24,7 +24,7 @@ type (
 	}
 )
 
-func NewRedisStorage(cluster *redis.ClusterClient, redisKeyPrefix string) Storage {
+func NewRedisStorage(cluster redis.UniversalClient, redisKeyPrefix string) Storage {
 	return &redisStorage{cluster: cluster, redisKeyPrefix: strings.TrimSpace(redisKeyPrefix)}
 }
 
