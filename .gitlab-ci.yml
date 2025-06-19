@@ -28,7 +28,7 @@ build-job: # This job runs in the build stage, which runs first.
     - go build -o gocacheprog .
 
 unit-test-job: # This job runs in the test stage.
-  image: repo.int.tsum.com/md/golang:1.24.1
+  image: repo.int.tsum.com/md/golang:v1.24.1
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
     - export GOCACHEPROG="gocacheprog -dir=$(go env GOCACHE) -r-prefix=$CI_PROJECT_PATH -r-usr=gdanichev -r-pwd=$REDIS_PWD_GOCACHEPROG -r-urls=legacy-keydb-cache-dev01.int.tsum.com:7000"
