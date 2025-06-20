@@ -32,10 +32,10 @@ func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bo
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		var ind index
 		fileIndex, err := os.Open(diskPathIndex)
-		defer fileIndex.Close()
 		if err != nil {
 			return GetResponse{}, false, fmt.Errorf("error opening index file %s: %w", key, err)
 		}
+		defer fileIndex.Close()
 		err = json.NewDecoder(fileIndex).Decode(&ind)
 		if err != nil {
 			return GetResponse{}, false, fmt.Errorf("failed to unmarshal file %s: %w", key, err)
