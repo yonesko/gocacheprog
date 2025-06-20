@@ -31,6 +31,7 @@ func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bo
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		var ind index
 		fileIndex, err := os.Open(diskPathIndex)
+		defer fileIndex.Close()
 		if err != nil {
 			return GetResponse{}, false, fmt.Errorf("error opening index file %s: %w", key, err)
 		}

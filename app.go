@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"sync"
 )
 
@@ -22,6 +24,13 @@ type (
 func (a App) Run(ctx context.Context) {
 	waitGroup := sync.WaitGroup{}
 	reader := json.NewDecoder(bufio.NewReader(a.inputReader))
+	defer func() {
+		waitGroup.Wait()
+		err := a.storage.Close(ctx)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error closing storage:", err)
+		}
+	}()
 	//handshake
 	a.resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
@@ -76,9 +85,7 @@ func (a App) Run(ctx context.Context) {
 			continue
 		}
 		if request.Command == CmdClose {
-			waitGroup.Wait()
-			err := a.storage.Close(ctx)
-			a.resp(Response{ID: request.ID}, err)
+			a.resp(Response{ID: request.ID}, nil)
 			break
 		}
 	}

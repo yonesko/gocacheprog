@@ -20,36 +20,43 @@ func TestApp_Run(t *testing.T) {
 	t.Run("regular", func(t *testing.T) {
 		buffer := &bytes.Buffer{}
 		app := NewApp(
-			marshalCmds(
+			bytes.NewReader(marshalCmds(
 				Request{ID: 1, Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 5, Body: strings.NewReader(must(randomString(5)))},
 				Request{ID: 2, Command: CmdPut, ActionID: []byte("ActionID_2"), OutputID: []byte("OutputID_2"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
-			),
+			)),
 			buffer,
 			hex.EncodeToString,
 			NewFileSystemStorage(t.TempDir()),
 		)
 		app.Run(context.Background())
-		fmt.Println(buffer.String())
+		//fmt.Println(buffer.String())
 	})
 	t.Run("parallel get and put of the same file", func(t *testing.T) {
 		tempDir := t.TempDir()
+		cmds := strings.Join(repeat(1000,
+			string(marshalCmds(Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
+				Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 600, Body: strings.NewReader(must(randomString(600)))},
+				Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
+				Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 666, Body: strings.NewReader(must(randomString(666)))},
+			))),
+			"\n")
 		buffer := &bytes.Buffer{}
-		for range 100 {
-			app := NewApp(
-				marshalCmds(
-					Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
-					Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
-				),
-				buffer,
-				hex.EncodeToString,
-				NewFileSystemStorage(tempDir),
-			)
-			app.Run(context.Background())
-			decoder := json.NewDecoder(buffer)
+		decoder := json.NewDecoder(buffer)
+		app := NewApp(
+			bytes.NewReader([]byte(cmds)),
+			buffer,
+			hex.EncodeToString,
+			NewFileSystemStorage(tempDir),
+		)
+		app.Run(context.Background())
+		for {
 			var resp Response
 			err := decoder.Decode(&resp)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal(fmt.Errorf("error decoding response: %w", err))
 			}
 			if resp.Err != "" {
 				log.Fatal(resp.Err, tempDir)
@@ -103,7 +110,7 @@ func buildGets(n int) string {
 			OutputID: []byte(strconv.Itoa(i)),
 		})
 	}
-	return string(must(io.ReadAll(marshalCmds(requests...))))
+	return string(marshalCmds(requests...))
 }
 
 func buildPuts(n int) string {
@@ -118,9 +125,9 @@ func buildPuts(n int) string {
 			Body:     strings.NewReader(must(randomString(5))),
 		})
 	}
-	return string(must(io.ReadAll(marshalCmds(requests...))))
+	return string(marshalCmds(requests...))
 }
-func marshalCmds(requests ...Request) io.Reader {
+func marshalCmds(requests ...Request) []byte {
 	buffer := &bytes.Buffer{}
 	encoder := json.NewEncoder(buffer)
 	for _, r := range requests {
@@ -129,7 +136,7 @@ func marshalCmds(requests ...Request) io.Reader {
 			must0(encoder.Encode(must(io.ReadAll(r.Body))))
 		}
 	}
-	return buffer
+	return buffer.Bytes()
 }
 
 type sleepingStorage struct {
@@ -162,4 +169,14 @@ func randomString(length int) (string, error) {
 		result[i] = charset[num.Int64()]
 	}
 	return string(result), nil
+}
+
+func repeat(count int, initial string) []string {
+	result := make([]string, 0, count)
+
+	for i := 0; i < count; i++ {
+		result = append(result, initial)
+	}
+
+	return result
 }
