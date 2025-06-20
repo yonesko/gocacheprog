@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -68,19 +69,9 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 		return "", errors.New("empty key")
 	}
 	diskPathBody, diskPathIndex := f.fileNames(request.Key)
-	fileBody, err := os.Create(diskPathBody)
+	err := writeFileAtomically(diskPathBody, request.Body)
 	if err != nil {
-		return "", fmt.Errorf("error creating file %s: %w", request.Key, err)
-	}
-	defer fileBody.Close()
-	fileIndex, err := os.Create(diskPathIndex)
-	if err != nil {
-		return "", fmt.Errorf("error creating file %s: %w", request.Key, err)
-	}
-	defer fileIndex.Close()
-	written, err := io.Copy(fileBody, request.Body)
-	if err != nil {
-		return "", fmt.Errorf("error writing file %s: %w", request.Key, err)
+		return "", fmt.Errorf("error creating body file %s: %w", request.Key, err)
 	}
 	indexBytes, err := json.Marshal(index{
 		OutputID: request.OutputID,
@@ -89,14 +80,24 @@ func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string,
 	if err != nil {
 		return "", fmt.Errorf("error marshalling index: %w %s", err, request.Key)
 	}
-	_, err = fileIndex.Write(indexBytes)
+	err = writeFileAtomically(diskPathIndex, bytes.NewReader(indexBytes))
 	if err != nil {
-		return "", fmt.Errorf("error writing index: %w %s", err, request.Key)
-	}
-	if written != request.BodySize {
-		return "", fmt.Errorf("file %s size mismatch: %d != %d", request.Key, written, request.BodySize)
+		return "", fmt.Errorf("error creating index file %s: %w", request.Key, err)
 	}
 	return filepath.Abs(diskPathBody)
+}
+
+func writeFileAtomically(path string, body io.Reader) error {
+	file, err := os.CreateTemp("", "*")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = io.Copy(file, body)
+	if err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), path)
 }
 
 func (f fileSystemStorage) Close(ctx context.Context) error {
