@@ -12,35 +12,23 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestApp_Run(t *testing.T) {
-	t.Run("regular", func(t *testing.T) {
-		buffer := &bytes.Buffer{}
-		app := NewApp(
-			bytes.NewReader(marshalCmds(
-				Request{ID: 1, Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 5, Body: strings.NewReader(must(randomString(5)))},
-				Request{ID: 2, Command: CmdPut, ActionID: []byte("ActionID_2"), OutputID: []byte("OutputID_2"), BodySize: 6, Body: strings.NewReader(must(randomString(6)))},
-			)),
-			buffer,
-			hex.EncodeToString,
-			NewFileSystemStorage(t.TempDir()),
-		)
-		app.Run(context.Background())
-		//fmt.Println(buffer.String())
-	})
 	t.Run("parallel get and put of the same file", func(t *testing.T) {
 		tempDir := t.TempDir()
 		cmds := strings.Join(repeat(1000,
-			string(marshalCmds(Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
+			string(marshalCmds(
+				Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
 				Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 600, Body: strings.NewReader(must(randomString(600)))},
 				Request{Command: CmdGet, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1")},
 				Request{Command: CmdPut, ActionID: []byte("ActionID_1"), OutputID: []byte("OutputID_1"), BodySize: 666, Body: strings.NewReader(must(randomString(666)))},
 			))),
 			"\n")
-		buffer := &bytes.Buffer{}
+		buffer := &safeBuffer{buf: bytes.Buffer{}}
 		decoder := json.NewDecoder(buffer)
 		app := NewApp(
 			bytes.NewReader([]byte(cmds)),
@@ -49,6 +37,7 @@ func TestApp_Run(t *testing.T) {
 			NewFileSystemStorage(tempDir),
 		)
 		app.Run(context.Background())
+		responsesCount := 0
 		for {
 			var resp Response
 			err := decoder.Decode(&resp)
@@ -61,6 +50,10 @@ func TestApp_Run(t *testing.T) {
 			if resp.Err != "" {
 				log.Fatal(resp.Err, tempDir)
 			}
+			responsesCount++
+		}
+		if responsesCount != 4000+1 {
+			log.Fatal(fmt.Errorf("expected 4000 responses, got %d", responsesCount))
 		}
 	})
 }
@@ -179,4 +172,27 @@ func repeat(count int, initial string) []string {
 	}
 
 	return result
+}
+
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuffer) Read(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Read(p)
+}
+
+func (s *safeBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
 }

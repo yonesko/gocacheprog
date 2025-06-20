@@ -24,13 +24,6 @@ type (
 func (a App) Run(ctx context.Context) {
 	waitGroup := sync.WaitGroup{}
 	reader := json.NewDecoder(bufio.NewReader(a.inputReader))
-	defer func() {
-		waitGroup.Wait()
-		err := a.storage.Close(ctx)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "error closing storage:", err)
-		}
-	}()
 	//handshake
 	a.resp(Response{KnownCommands: []Cmd{CmdGet, CmdPut, CmdClose}}, nil)
 	//
@@ -88,6 +81,11 @@ func (a App) Run(ctx context.Context) {
 			a.resp(Response{ID: request.ID}, nil)
 			break
 		}
+	}
+	waitGroup.Wait()
+	err := a.storage.Close(ctx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error closing storage:", err)
 	}
 }
 
