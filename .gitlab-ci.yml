@@ -45,7 +45,7 @@ unit-test-job: # This job runs in the test stage.
     - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-metrics -r-urls=keydbhost:6379"
     - echo "Warming up cache..."
     - go build -o gocacheprog .
-    - echo "Ensure cache is used
+    - echo "Ensure cache is used"
     - go build -o gocacheprog . 2>&1 > log
     - |
       miss=log| jq '.gets_miss'
