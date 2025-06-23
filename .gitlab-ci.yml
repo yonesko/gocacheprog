@@ -39,8 +39,8 @@ unit-test-job: # This job runs in the test stage.
       variables:
         ALLOW_EMPTY_PASSWORD: yes
   script:
-    - sudo apt-get update
-    - sudo apt-get install -y jq
+    - apt-get update
+    - apt-get install -y jq
     - go test -race ./...
     - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-metrics -r-urls=keydbhost:6379"
     - echo "Warming up cache..."
