@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"reflect"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -107,51 +107,32 @@ func (s *metrics) Close(ctx context.Context) error {
 	}
 	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
 	s.GetCmdAvgTime = safeDiv(s.GetCmdTimeSum, s.GetCmd)
-	fmt.Fprintf(os.Stderr, strings.Join([]string{
-		"measured:%s",
-		"gets:%d",
-		"gets_miss:%d",
-		"puts:%d",
-		"close:%d",
-		"errors:%d",
 
-		"get min time:%s",
-		"get max time:%s",
-		"get avg time:%s",
-		"get sum time:%s",
+	stats := map[string]any{
+		"measured":  s.DecoratedName,
+		"gets":      s.GetCmd,
+		"gets_miss": s.GetMissCmd,
+		"puts":      s.PutCmd,
+		"close":     s.CloseCmd,
+		"errors":    s.Errors,
 
-		"put min time:%s",
-		"put max time:%s",
-		"put avg time:%s",
-		"put sum time:%s",
+		"get_min_time": time.Duration(s.GetCmdMinTime).String(),
+		"get_max_time": time.Duration(s.GetCmdMaxTime).String(),
+		"get_avg_time": time.Duration(s.GetCmdAvgTime).String(),
+		"get_sum_time": time.Duration(s.GetCmdTimeSum).String(),
 
-		"put min size:%s",
-		"put avg size:%s",
-		"put max size:%s",
-		"put sum size:%s",
-	}, "\n")+"\n",
-		s.DecoratedName,
-		s.GetCmd,
-		s.GetMissCmd,
-		s.PutCmd,
-		s.CloseCmd,
-		s.Errors,
+		"put_min_time": time.Duration(s.PutCmdMinTime).String(),
+		"put_max_time": time.Duration(s.PutCmdMaxTime).String(),
+		"put_avg_time": time.Duration(s.PutCmdAvgTime).String(),
+		"put_sum_time": time.Duration(s.PutCmdTimeSum).String(),
 
-		time.Duration(s.GetCmdMinTime),
-		time.Duration(s.GetCmdMaxTime),
-		time.Duration(s.GetCmdAvgTime),
-		time.Duration(s.GetCmdTimeSum),
+		"put_min_size": humanSize(s.PutMinSize),
+		"put_avg_size": humanSize(safeDiv(s.PutTotalSize, s.PutCmd)),
+		"put_max_size": humanSize(s.PutMaxSize),
+		"put_sum_size": humanSize(s.PutTotalSize),
+	}
 
-		time.Duration(s.PutCmdMinTime),
-		time.Duration(s.PutCmdMaxTime),
-		time.Duration(s.PutCmdAvgTime),
-		time.Duration(s.PutCmdTimeSum),
-
-		humanSize(s.PutMinSize),
-		humanSize(safeDiv(s.PutTotalSize, s.PutCmd)),
-		humanSize(s.PutMaxSize),
-		humanSize(s.PutTotalSize),
-	)
+	fmt.Fprint(os.Stderr, string(must(json.Marshal(stats))))
 	return err
 }
 

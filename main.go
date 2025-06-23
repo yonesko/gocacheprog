@@ -102,11 +102,11 @@ func buildStorage() Storage {
 		return withMetrics(NewFileSystemStorage(*dir))
 	}
 	return NewLogStorage(withMetrics(NewDecoratorStorage(
-		withMetrics(NewFileSystemStorage(*dir)),
-		withMetrics(NewRedisStorage(
+		NewFileSystemStorage(*dir),
+		NewRedisStorage(
 			client,
 			*redisKeyPrefix,
-		)),
+		),
 	)))
 }
 
