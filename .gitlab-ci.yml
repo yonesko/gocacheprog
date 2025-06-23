@@ -40,7 +40,10 @@ unit-test-job: # This job runs in the test stage.
         ALLOW_EMPTY_PASSWORD: yes
   script:
     - go test -race ./...
-    - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -r-urls=keydbhost:6379"
+    - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-metrics -r-urls=keydbhost:6379"
+    - echo "Warming up cache"
+    - go build -o gocacheprog .
+    - echo "Ensure cache is used
     - go build -o gocacheprog .
 
 .build_docker: &docker_build_template

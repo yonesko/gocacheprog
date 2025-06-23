@@ -94,8 +94,7 @@ func (a App) resp(response Response, err error) {
 		response.Err = err.Error()
 	}
 	b := must(json.Marshal(response))
-	must(a.outputWriter.Write(b))
-	must(a.outputWriter.Write([]byte{'\n'}))
+	must(a.outputWriter.Write(append(b, '\n')))
 }
 
 func NewApp(inputReader io.Reader, outputWriter io.Writer, keyConverter func(src []byte) string, storage Storage) App {
