@@ -39,12 +39,20 @@ unit-test-job: # This job runs in the test stage.
       variables:
         ALLOW_EMPTY_PASSWORD: yes
   script:
+    - sudo apt-get update
+    - sudo apt-get install -y jq
     - go test -race ./...
     - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-metrics -r-urls=keydbhost:6379"
-    - echo "Warming up cache"
+    - echo "Warming up cache..."
     - go build -o gocacheprog .
     - echo "Ensure cache is used
     - go build -o gocacheprog .
+    - |
+      miss=pbpaste| jq '.gets_miss'
+      if (( miss >= 10 )); then
+        echo "❌ Too many get misses"
+        exit 1
+      fi
 
 .build_docker: &docker_build_template
   image:
