@@ -71,11 +71,19 @@ unit-test-job: # This job runs in the test stage.
       - main
 
 
-deploy-job: # This job runs in the deploy stage.
+push_docker_golang:
   <<: *docker_build_template
   variables:
     IMAGE: repo.int.tsum.com/md/golang
     TAG: v1.24.1
-    DOCKERFILE: Dockerfile
+    DOCKERFILE: Dockerfile_golang
+
+
+push_docker_golangci_lint:
+  <<: *docker_build_template
+  variables:
+    IMAGE: repo.int.tsum.com/md/golang
+    TAG: v1.24.1
+    DOCKERFILE: Dockerfile_golangci_lint
 
 

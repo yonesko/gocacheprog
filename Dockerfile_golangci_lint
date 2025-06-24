@@ -1,0 +1,6 @@
+FROM repo.int.tsum.com/delta/golangci-lint:v2.1.6
+LABEL authors="gdanichev"
+WORKDIR /app
+COPY . .
+RUN go build -o /usr/local/go/bin/gocacheprog .
+
