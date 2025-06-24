@@ -41,6 +41,7 @@ unit-test-job: # This job runs in the test stage.
   script:
     - apt-get update
     - apt-get install -y jq
+    - apt-get install -y redis-tools
     - go test -race ./...
     - export GOCACHEPROG="./gocacheprog -dir=$(mktemp -d) -log-metrics -r-urls=keydbhost:6379"
     - echo "Warming up cache..."
@@ -53,6 +54,7 @@ unit-test-job: # This job runs in the test stage.
         echo "❌ Too many get misses"
         exit 1
       fi
+    - redis-cli -h keydbhost info stats | grep -E "total_commands_processed"
 
 .build_docker: &docker_build_template
   image:
