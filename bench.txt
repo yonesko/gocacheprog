@@ -4,36 +4,53 @@ pkg: gocacheprog
 cpu: Apple M1 Pro
 Benchmark
 Benchmark/many_gets
-Benchmark/many_gets-10         	     360	   3278439 ns/op
-Benchmark/many_gets-10         	     362	   3284715 ns/op
-Benchmark/many_gets-10         	     363	   3274988 ns/op
-Benchmark/many_gets-10         	     364	   3298371 ns/op
-Benchmark/many_gets-10         	     367	   3262287 ns/op
-Benchmark/many_gets-10         	     368	   3273332 ns/op
-Benchmark/many_gets-10         	     361	   3276909 ns/op
-Benchmark/many_gets-10         	     364	   3301091 ns/op
-Benchmark/many_gets-10         	     369	   3281603 ns/op
-Benchmark/many_gets-10         	     364	   3260378 ns/op
-Benchmark/many_gets-10         	     368	   3273904 ns/op
-Benchmark/many_gets-10         	     363	   3271115 ns/op
-Benchmark/many_gets-10         	     362	   3318697 ns/op
-Benchmark/many_gets-10         	     366	   3269901 ns/op
-Benchmark/many_gets-10         	     368	   3279522 ns/op
+Benchmark/many_gets-10           	     356	   3289169 ns/op
+Benchmark/many_gets-10           	     364	   3265933 ns/op
+Benchmark/many_gets-10           	     362	   3264522 ns/op
+Benchmark/many_gets-10           	     364	   3292046 ns/op
+Benchmark/many_gets-10           	     366	   3282904 ns/op
+Benchmark/many_gets-10           	     364	   3284779 ns/op
+Benchmark/many_gets-10           	     368	   3309897 ns/op
+Benchmark/many_gets-10           	     358	   3303438 ns/op
+Benchmark/many_gets-10           	     358	   3279893 ns/op
+Benchmark/many_gets-10           	     363	   3274433 ns/op
+Benchmark/many_gets-10           	     362	   3272510 ns/op
+Benchmark/many_gets-10           	     368	   3286661 ns/op
+Benchmark/many_gets-10           	     364	   3275696 ns/op
+Benchmark/many_gets-10           	     358	   3265254 ns/op
+Benchmark/many_gets-10           	     362	   3281126 ns/op
 Benchmark/many_puts
-Benchmark/many_puts-10         	     312	   3794686 ns/op
-Benchmark/many_puts-10         	     320	   3742112 ns/op
-Benchmark/many_puts-10         	     314	   3829989 ns/op
-Benchmark/many_puts-10         	     318	   3782382 ns/op
-Benchmark/many_puts-10         	     318	   3762217 ns/op
-Benchmark/many_puts-10         	     313	   3774744 ns/op
-Benchmark/many_puts-10         	     318	   3780687 ns/op
-Benchmark/many_puts-10         	     319	   3825383 ns/op
-Benchmark/many_puts-10         	     315	   3793734 ns/op
-Benchmark/many_puts-10         	     318	   3754930 ns/op
-Benchmark/many_puts-10         	     313	   3799157 ns/op
-Benchmark/many_puts-10         	     315	   3774904 ns/op
-Benchmark/many_puts-10         	     321	   3783891 ns/op
-Benchmark/many_puts-10         	     321	   3748134 ns/op
-Benchmark/many_puts-10         	     316	   3780963 ns/op
+Benchmark/many_puts-10           	     315	   3775609 ns/op
+Benchmark/many_puts-10           	     316	   3810614 ns/op
+Benchmark/many_puts-10           	     316	   3788563 ns/op
+Benchmark/many_puts-10           	     314	   3784794 ns/op
+Benchmark/many_puts-10           	     315	   3790562 ns/op
+Benchmark/many_puts-10           	     315	   3780826 ns/op
+Benchmark/many_puts-10           	     320	   3769459 ns/op
+Benchmark/many_puts-10           	     319	   3799709 ns/op
+Benchmark/many_puts-10           	     315	   3770304 ns/op
+Benchmark/many_puts-10           	     319	   3786401 ns/op
+Benchmark/many_puts-10           	     316	   3782941 ns/op
+Benchmark/many_puts-10           	     315	   3765943 ns/op
+Benchmark/many_puts-10           	     315	   3716184 ns/op
+Benchmark/many_puts-10           	     318	   3780573 ns/op
+Benchmark/many_puts-10           	     315	   3740426 ns/op
+Benchmark_DecoratorStorage
+Benchmark_DecoratorStorage/put
+Benchmark_DecoratorStorage/put-10         	     817	   1574884 ns/op
+Benchmark_DecoratorStorage/put-10         	     771	   1570373 ns/op
+Benchmark_DecoratorStorage/put-10         	     730	   1617545 ns/op
+Benchmark_DecoratorStorage/put-10         	     753	   1588590 ns/op
+Benchmark_DecoratorStorage/put-10         	     764	   1576175 ns/op
+Benchmark_DecoratorStorage/put-10         	     756	   1568356 ns/op
+Benchmark_DecoratorStorage/put-10         	     762	   1577456 ns/op
+Benchmark_DecoratorStorage/put-10         	     748	   1581516 ns/op
+Benchmark_DecoratorStorage/put-10         	     754	   1587266 ns/op
+Benchmark_DecoratorStorage/put-10         	     753	   1575224 ns/op
+Benchmark_DecoratorStorage/put-10         	     758	   1591906 ns/op
+Benchmark_DecoratorStorage/put-10         	     756	   1598730 ns/op
+Benchmark_DecoratorStorage/put-10         	     756	   1587949 ns/op
+Benchmark_DecoratorStorage/put-10         	     762	   1630548 ns/op
+Benchmark_DecoratorStorage/put-10         	     750	   1589672 ns/op
 PASS
-ok  	gocacheprog	46.956s
+ok  	gocacheprog	67.297s

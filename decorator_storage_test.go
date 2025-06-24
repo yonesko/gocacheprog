@@ -113,3 +113,21 @@ func Test_DecoratorStorage(t *testing.T) {
 		}
 	})
 }
+
+func Benchmark_DecoratorStorage(b *testing.B) {
+	b.Run("put", func(b *testing.B) {
+		storage := NewDecoratorStorage(NewFileSystemStorage(b.TempDir()), sleepingStorage{})
+		request := PutRequest{
+			Key:      "dcd3McUV",
+			OutputID: []byte("MinRana"),
+			Body:     strings.NewReader(must(randomString(100))),
+			BodySize: 100,
+		}
+		for i := 0; i < b.N; i++ {
+			_, err := storage.Put(context.Background(), request)
+			if err != nil {
+				b.Fatalf("expected no error, got %v", err)
+			}
+		}
+	})
+}
