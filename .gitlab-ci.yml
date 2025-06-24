@@ -55,7 +55,7 @@ unit-test-job: # This job runs in the test stage.
         exit 1
       fi
     - |
-      total_commands_processed=`redis-cli -h keydbhost info stats | grep -E "total_commands_processed" | awk -f: '{ print $2 }'`
+      total_commands_processed=`redis-cli -h keydbhost info stats | grep -E "total_commands_processed" | grep -Eo '[0-9]+'`
       if (( total_commands_processed <= 100 )); then
         echo "❌ Too little request processed by keydb"
         exit 1
