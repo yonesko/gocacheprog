@@ -49,16 +49,22 @@ unit-test-job: # This job runs in the test stage.
     - echo "Ensure cache is used"
     - go build -o gocacheprog . 2>&1 > log
     - |
-      miss=log| jq '.gets_miss'
+      miss=$(log| jq '.gets_miss')
+      miss=${miss:-100000}
       if (( miss >= 10 )); then
         echo "❌ Too many get misses"
         exit 1
+      else
+        echo "✅ Miss count is not high: $miss"
       fi
     - |
       total_commands_processed=`redis-cli -h keydbhost info stats | grep -E "total_commands_processed" | grep -Eo '[0-9]+'`
+      total_commands_processed=$(total_commands_processed:-0)
       if (( total_commands_processed <= 100 )); then
         echo "❌ Too little request processed by keydb"
         exit 1
+      else
+        echo "✅ Request processed count is not low: $total_commands_processed"
       fi
 
 .build_docker: &docker_build_template
