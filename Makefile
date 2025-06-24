@@ -7,3 +7,8 @@ generate_mocks:
 
 benchmark:
 	go test -v -run=^$$  -count 15 -bench=. gocacheprog > bench.txt
+
+benchmark_compare:
+ 	git show HEAD^:bench.txt > old_bench.txt
+	benchmark
+	benchstat old_bench.txt bench.txt
