@@ -59,15 +59,14 @@ func (s *decoratorStorage) Put(ctx context.Context, request PutRequest) (string,
 	}
 
 	s.wg.Add(1)
-	go func() {
+	go func(request PutRequest) {
 		defer s.wg.Done()
-		request := request
 		request.Body = bytes.NewReader(bodyBytes)
-		_, err = s.externalStorage.Put(ctx, request)
+		_, err := s.externalStorage.Put(ctx, request)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not store external response: %s", err)
 		}
-	}()
+	}(request)
 
 	request.Body = bytes.NewReader(bodyBytes)
 	diskPath, err := s.fileSystemStorage.Put(ctx, request)
