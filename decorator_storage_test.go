@@ -62,6 +62,7 @@ func Test_DecoratorStorage(t *testing.T) {
 		externalStorage := NewMockStorage(ctrl)
 		externalStorage.EXPECT().Get(gomock.Any(), "fOwaAFKWb").
 			Return(GetResponse{}, false, fmt.Errorf("LihuaJones")).Times(1)
+		externalStorage.EXPECT().Close(gomock.Any()).Return(nil).Times(1)
 
 		storage := NewDecoratorStorage(NewFileSystemStorage(t.TempDir()), externalStorage)
 		_, ok, err := storage.Get(context.Background(), "fOwaAFKWb")
@@ -70,6 +71,45 @@ func Test_DecoratorStorage(t *testing.T) {
 		}
 		if ok {
 			t.Fatal("expected to be missing")
+		}
+		err = storage.Close(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("get returns after put", func(t *testing.T) {
+		const key = "fOwaAFKWb"
+		ctrl := gomock.NewController(t)
+		externalStorage := NewMockStorage(ctrl)
+		externalStorage.EXPECT().Put(gomock.Any(), gomock.Any()).
+			Return("", nil).Times(1)
+		externalStorage.EXPECT().Close(gomock.Any()).Return(nil).Times(1)
+
+		storage := NewDecoratorStorage(NewFileSystemStorage(t.TempDir()), externalStorage)
+		diskPath, err := storage.Put(context.Background(), PutRequest{
+			Key:      key,
+			OutputID: []byte("MinRana"),
+			Body:     strings.NewReader(must(randomString(100))),
+			BodySize: 100,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diskPath == "" {
+			t.Fatal("expected disk path)")
+		}
+
+		_, ok, err := storage.Get(context.Background(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Fatal("expected to be found")
+		}
+
+		err = storage.Close(context.Background())
+		if err != nil {
+			t.Fatal(err)
 		}
 	})
 }
