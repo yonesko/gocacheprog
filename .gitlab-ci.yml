@@ -49,7 +49,7 @@ unit-test-job: # This job runs in the test stage.
     - echo "Ensure cache is used"
     - go build -o gocacheprog . 2>&1 > log
     - |
-      miss=$(log| jq '.gets_miss')
+      miss=$(cat log| jq '.gets_miss')
       miss=${miss:-100000}
       if (( miss >= 10 )); then
         echo "❌ Too many get misses"
