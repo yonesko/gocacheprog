@@ -1,0 +1,39 @@
+goos: darwin
+goarch: arm64
+pkg: gocacheprog
+cpu: Apple M1 Pro
+Benchmark
+Benchmark/many_gets
+Benchmark/many_gets-10         	     890	   1309879 ns/op
+Benchmark/many_gets-10         	     927	   1759306 ns/op
+Benchmark/many_gets-10         	     868	   1363103 ns/op
+Benchmark/many_gets-10         	     776	   1377523 ns/op
+Benchmark/many_gets-10         	     806	   1416296 ns/op
+Benchmark/many_gets-10         	     886	   1434846 ns/op
+Benchmark/many_gets-10         	     930	   1400216 ns/op
+Benchmark/many_gets-10         	     879	   1373371 ns/op
+Benchmark/many_gets-10         	     808	   1352566 ns/op
+Benchmark/many_gets-10         	     915	   1319523 ns/op
+Benchmark/many_gets-10         	     871	   1348706 ns/op
+Benchmark/many_gets-10         	     928	   1336587 ns/op
+Benchmark/many_gets-10         	     914	   1308128 ns/op
+Benchmark/many_gets-10         	     960	   1279270 ns/op
+Benchmark/many_gets-10         	     955	   1328012 ns/op
+Benchmark/many_puts
+Benchmark/many_puts-10         	     727	   1693285 ns/op
+Benchmark/many_puts-10         	     668	   1752246 ns/op
+Benchmark/many_puts-10         	     720	   1665271 ns/op
+Benchmark/many_puts-10         	     740	   1649923 ns/op
+Benchmark/many_puts-10         	     723	   1657054 ns/op
+Benchmark/many_puts-10         	     723	   1652796 ns/op
+Benchmark/many_puts-10         	     714	   1673736 ns/op
+Benchmark/many_puts-10         	     721	   1648471 ns/op
+Benchmark/many_puts-10         	     706	   1631981 ns/op
+Benchmark/many_puts-10         	     670	   1617581 ns/op
+Benchmark/many_puts-10         	     720	   1662646 ns/op
+Benchmark/many_puts-10         	     721	   1645378 ns/op
+Benchmark/many_puts-10         	     727	   1645701 ns/op
+Benchmark/many_puts-10         	     745	   1666777 ns/op
+Benchmark/many_puts-10         	     748	   1658733 ns/op
+PASS
+ok  	gocacheprog	43.018s

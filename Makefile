@@ -4,3 +4,6 @@ install:
 generate_mocks:
 	rm mocks.go
 	mockgen -package main -destination mocks.go gocacheprog Storage
+
+benchmark:
+	go test -v -run=^$$  -count 15 -bench=. gocacheprog > bench.txt
