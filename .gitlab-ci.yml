@@ -88,7 +88,7 @@ push_docker_golangci_lint:
   <<: *docker_build_template
   variables:
     IMAGE: repo.int.tsum.com/md/golangci_lint
-    TAG: v1.24.1
+    TAG: v2.1.6
     DOCKERFILE: Dockerfile_golangci_lint
 
 
