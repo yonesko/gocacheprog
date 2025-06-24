@@ -6,7 +6,7 @@ generate_mocks:
 	mockgen -package main -destination mocks.go gocacheprog Storage
 
 benchmark:
-	git show HEAD^:bench.txt > old_bench.txt
+	git show HEAD:bench.txt > old_bench.txt
 	go test -v -run=^$$  -count 15 -bench=. gocacheprog > bench.txt
 	benchstat old_bench.txt bench.txt
 
