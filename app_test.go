@@ -136,17 +136,17 @@ type sleepingStorage struct {
 }
 
 func (t sleepingStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
-	time.Sleep(time.Microsecond)
+	time.Sleep(time.Millisecond)
 	return GetResponse{}, true, nil
 }
 
 func (t sleepingStorage) Put(ctx context.Context, request PutRequest) (string, error) {
-	time.Sleep(time.Microsecond)
+	time.Sleep(time.Millisecond)
 	return "", nil
 }
 
 func (t sleepingStorage) Close(ctx context.Context) error {
-	time.Sleep(time.Microsecond)
+	time.Sleep(time.Millisecond)
 	return nil
 }
 
