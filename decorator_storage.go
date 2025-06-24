@@ -9,16 +9,16 @@ import (
 
 // use one storage to save to disk and one to the external storage
 type decoratorStorage struct {
-	diskStorage     Storage
-	externalStorage Storage
+	fileSystemStorage Storage
+	externalStorage   Storage
 }
 
 func NewDecoratorStorage(diskStorage Storage, externalStorage Storage) Storage {
-	return &decoratorStorage{diskStorage: diskStorage, externalStorage: externalStorage}
+	return &decoratorStorage{fileSystemStorage: diskStorage, externalStorage: externalStorage}
 }
 
 func (s decoratorStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
-	getResponse, ok, err := s.diskStorage.Get(ctx, key)
+	getResponse, ok, err := s.fileSystemStorage.Get(ctx, key)
 	if err != nil {
 		return GetResponse{}, false, fmt.Errorf("unable to get key %s: %w", key, err)
 	}
@@ -36,7 +36,7 @@ func (s decoratorStorage) Get(ctx context.Context, key string) (GetResponse, boo
 	if getResponse.Body == nil {
 		return GetResponse{}, false, fmt.Errorf("empty getResponse.Body %s", key)
 	}
-	_, err = s.diskStorage.Put(ctx, PutRequest{
+	_, err = s.fileSystemStorage.Put(ctx, PutRequest{
 		Key:      key,
 		OutputID: getResponse.OutputID,
 		Body:     getResponse.Body,
@@ -45,7 +45,7 @@ func (s decoratorStorage) Get(ctx context.Context, key string) (GetResponse, boo
 	if err != nil {
 		return GetResponse{}, false, fmt.Errorf("failed to store response: %w", err)
 	}
-	return s.diskStorage.Get(ctx, key)
+	return s.fileSystemStorage.Get(ctx, key)
 }
 
 func (s decoratorStorage) Put(ctx context.Context, request PutRequest) (string, error) {
@@ -55,7 +55,7 @@ func (s decoratorStorage) Put(ctx context.Context, request PutRequest) (string, 
 		return "", fmt.Errorf("could not read body: %w", err)
 	}
 	request.Body = bytes.NewReader(bodyBytes)
-	diskPath, err := s.diskStorage.Put(ctx, request)
+	diskPath, err := s.fileSystemStorage.Put(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("could not store response: %w", err)
 	}
@@ -73,7 +73,7 @@ func (s decoratorStorage) Put(ctx context.Context, request PutRequest) (string, 
 }
 
 func (s decoratorStorage) Close(ctx context.Context) error {
-	err1 := s.diskStorage.Close(ctx)
+	err1 := s.fileSystemStorage.Close(ctx)
 	err2 := s.externalStorage.Close(ctx)
 	if err1 == nil && err2 == nil {
 		return nil

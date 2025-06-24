@@ -113,7 +113,7 @@ func buildPuts(n int) string {
 			ID:       int64(i),
 			Command:  CmdPut,
 			ActionID: []byte("ActionID_" + strconv.Itoa(i)),
-			OutputID: []byte("OutputID_1" + strconv.Itoa(i)),
+			OutputID: []byte("OutputID_" + strconv.Itoa(i)),
 			BodySize: 5,
 			Body:     strings.NewReader(must(randomString(5))),
 		})

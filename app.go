@@ -37,7 +37,6 @@ func (a App) Run(ctx context.Context) {
 		}
 		if request.Command == CmdPut {
 			if request.BodySize > 0 {
-				//TODO stream
 				var body []byte
 				err := reader.Decode(&body)
 				if err != nil {
