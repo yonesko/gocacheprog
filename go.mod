@@ -1,4 +1,4 @@
-module gocacheprog
+module github.com/yonesko/gocacheprog
 
 go 1.24
 
