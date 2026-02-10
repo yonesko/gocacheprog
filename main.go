@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var (
