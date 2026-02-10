@@ -66,49 +66,53 @@ func main() {
 }
 
 func buildStorage() Storage {
-	withMetrics := func(s Storage) Storage {
-		if *logMetrics {
-			return NewMetricsStorage(s)
-		}
-		return s
-	}
-
-	client, err := func() (redis.UniversalClient, error) {
-		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:      strings.Split(*redisAddresses, ","),
-			ClientName: "gocacheprog",
-			Username:   *redisUser,
-			Password:   *redisPassword,
-		})
-		err := client.Ping(context.Background()).Err()
-		if err != nil && err.Error() == "ERR This instance has cluster support disabled" {
-			split := strings.Split(*redisAddresses, ",")
-			if len(split) != 1 {
-				return nil, fmt.Errorf("invalid redis address count: %s", *redisAddresses)
-			}
-			return redis.NewClient(&redis.Options{
-				Addr:       split[0],
-				ClientName: "gocacheprog",
-				Username:   *redisUser,
-				Password:   *redisPassword,
-			}), nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		return client, nil
-	}()
+	client, err := connectRedis()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", err)
-		return withMetrics(NewFileSystemStorage(*dir))
+		storage := NewFileSystemStorage(*dir)
+		if *logMetrics {
+			return NewMetricsStorage(storage)
+		}
+		return storage
 	}
-	return NewLogStorage(withMetrics(NewDecoratorStorage(
+
+	decorator := NewDecoratorStorage(
 		NewFileSystemStorage(*dir),
 		NewRedisStorage(
 			client,
 			*redisKeyPrefix,
 		),
-	)))
+	)
+	if *logMetrics {
+		decorator = NewMetricsStorage(decorator)
+	}
+	return NewLogStorage(decorator)
+}
+
+func connectRedis() (redis.UniversalClient, error) {
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      strings.Split(*redisAddresses, ","),
+		ClientName: "gocacheprog",
+		Username:   *redisUser,
+		Password:   *redisPassword,
+	})
+	err := client.Ping(context.Background()).Err()
+	if err != nil && err.Error() == "ERR This instance has cluster support disabled" {
+		split := strings.Split(*redisAddresses, ",")
+		if len(split) != 1 {
+			return nil, fmt.Errorf("invalid redis address count: %s", *redisAddresses)
+		}
+		return redis.NewClient(&redis.Options{
+			Addr:       split[0],
+			ClientName: "gocacheprog",
+			Username:   *redisUser,
+			Password:   *redisPassword,
+		}), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 func must[T any](t T, err error) T {
