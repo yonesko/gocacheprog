@@ -30,7 +30,7 @@ between different builds.
 ### Example Usage
 
 ```yaml
-GOCACHEPROG=gocacheprog -r-urls "localhost:6379" -dir "/tmp/cache"
+GOCACHEPROG="gocacheprog -r-urls localhost:6379 -dir /tmp/cache" go build ./...
 ```
 
 ## Architecture
