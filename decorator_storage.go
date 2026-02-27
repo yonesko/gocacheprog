@@ -64,7 +64,7 @@ func (s *decoratorStorage) Put(ctx context.Context, request PutRequest) (string,
 		request.Body = bytes.NewReader(bodyBytes)
 		_, err := s.externalStorage.Put(ctx, request)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not store external response: %s", err)
+			fmt.Fprintf(os.Stderr, "could not store external response: %s\n", err)
 		}
 	}(request)
 

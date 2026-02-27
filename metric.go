@@ -132,7 +132,7 @@ func (s *metrics) Close(ctx context.Context) error {
 		"put_sum_size": humanSize(s.PutTotalSize),
 	}
 
-	fmt.Fprint(os.Stderr, string(must(json.Marshal(stats))))
+	fmt.Fprintln(os.Stderr, string(must(json.Marshal(stats))))
 	return err
 }
 
