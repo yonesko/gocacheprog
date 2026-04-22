@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"text/tabwriter"
 	"time"
 )
 
@@ -108,31 +108,65 @@ func (s *metrics) Close(ctx context.Context) error {
 	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
 	s.GetCmdAvgTime = safeDiv(s.GetCmdTimeSum, s.GetCmd)
 
-	stats := map[string]any{
-		"measured":  s.DecoratedName,
-		"gets":      s.GetCmd,
-		"gets_miss": s.GetMissCmd,
-		"puts":      s.PutCmd,
-		"close":     s.CloseCmd,
-		"errors":    s.Errors,
+	// Initialize tabwriter
+	w := tabwriter.NewWriter(os.Stderr, 0, 0, 2, ' ', 0)
 
-		"get_min_time": time.Duration(s.GetCmdMinTime).String(),
-		"get_max_time": time.Duration(s.GetCmdMaxTime).String(),
-		"get_avg_time": time.Duration(s.GetCmdAvgTime).String(),
-		"get_sum_time": time.Duration(s.GetCmdTimeSum).String(),
+	// Print overall stats table
+	fmt.Fprintln(w, "=== OVERALL STATS ===")
+	fmt.Fprintln(w, "Metric\tValue")
+	fmt.Fprintln(w, "------\t-----")
+	fmt.Fprintf(w, "Measured Storage\t%s\n", s.DecoratedName)
+	fmt.Fprintf(w, "GET Operations\t%d\n", s.GetCmd)
+	fmt.Fprintf(w, "GET Misses\t%d\n", s.GetMissCmd)
+	fmt.Fprintf(w, "PUT Operations\t%d\n", s.PutCmd)
+	fmt.Fprintf(w, "Close Operations\t%d\n", s.CloseCmd)
+	fmt.Fprintf(w, "Errors\t%d\n", s.Errors)
+	fmt.Fprintln(w, "")
 
-		"put_min_time": time.Duration(s.PutCmdMinTime).String(),
-		"put_max_time": time.Duration(s.PutCmdMaxTime).String(),
-		"put_avg_time": time.Duration(s.PutCmdAvgTime).String(),
-		"put_sum_time": time.Duration(s.PutCmdTimeSum).String(),
+	// Print GET operations stats table
+	fmt.Fprintln(w, "=== GET OPERATIONS ===")
+	fmt.Fprintln(w, "Metric\tValue\t")
+	fmt.Fprintln(w, "------\t-----\t")
+	if s.GetCmd > 0 {
+		fmt.Fprintf(w, "Min Time\t%s\n", time.Duration(s.GetCmdMinTime).String())
+		fmt.Fprintf(w, "Max Time\t%s\n", time.Duration(s.GetCmdMaxTime).String())
+		fmt.Fprintf(w, "Avg Time\t%s\n", time.Duration(s.GetCmdAvgTime).String())
+		fmt.Fprintf(w, "Total Time\t%s\n", time.Duration(s.GetCmdTimeSum).String())
+	} else {
+		fmt.Fprintln(w, "Min Time\tN/A")
+		fmt.Fprintln(w, "Max Time\tN/A")
+		fmt.Fprintln(w, "Avg Time\tN/A")
+		fmt.Fprintln(w, "Total Time\tN/A")
+	}
+	fmt.Fprintln(w, "")
 
-		"put_min_size": humanSize(s.PutMinSize),
-		"put_avg_size": humanSize(safeDiv(s.PutTotalSize, s.PutCmd)),
-		"put_max_size": humanSize(s.PutMaxSize),
-		"put_sum_size": humanSize(s.PutTotalSize),
+	// Print PUT operations stats table
+	fmt.Fprintln(w, "=== PUT OPERATIONS ===")
+	fmt.Fprintln(w, "Metric\tValue\t")
+	fmt.Fprintln(w, "------\t-----\t")
+	if s.PutCmd > 0 {
+		fmt.Fprintf(w, "Min Time\t%s\n", time.Duration(s.PutCmdMinTime).String())
+		fmt.Fprintf(w, "Max Time\t%s\n", time.Duration(s.PutCmdMaxTime).String())
+		fmt.Fprintf(w, "Avg Time\t%s\n", time.Duration(s.PutCmdAvgTime).String())
+		fmt.Fprintf(w, "Total Time\t%s\n", time.Duration(s.PutCmdTimeSum).String())
+		fmt.Fprintf(w, "Min Size\t%s\n", humanSize(s.PutMinSize))
+		fmt.Fprintf(w, "Max Size\t%s\n", humanSize(s.PutMaxSize))
+		fmt.Fprintf(w, "Avg Size\t%s\n", humanSize(safeDiv(s.PutTotalSize, s.PutCmd)))
+		fmt.Fprintf(w, "Total Size\t%s\n", humanSize(s.PutTotalSize))
+	} else {
+		fmt.Fprintln(w, "Min Time\tN/A")
+		fmt.Fprintln(w, "Max Time\tN/A")
+		fmt.Fprintln(w, "Avg Time\tN/A")
+		fmt.Fprintln(w, "Total Time\tN/A")
+		fmt.Fprintln(w, "Min Size\tN/A")
+		fmt.Fprintln(w, "Max Size\tN/A")
+		fmt.Fprintln(w, "Avg Size\tN/A")
+		fmt.Fprintln(w, "Total Size\tN/A")
 	}
 
-	fmt.Fprintln(os.Stderr, string(must(json.Marshal(stats))))
+	// Flush the writer to ensure all data is written
+	w.Flush()
+
 	return err
 }
 
