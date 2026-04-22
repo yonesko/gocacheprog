@@ -164,10 +164,7 @@ func (s *metrics) Close(ctx context.Context) error {
 		fmt.Fprintln(w, "Total Size\tN/A")
 	}
 
-	// Flush the writer to ensure all data is written
-	w.Flush()
-
-	return err
+	return w.Flush()
 }
 
 func humanSize(bytes int64) string {
