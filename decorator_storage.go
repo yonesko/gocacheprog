@@ -52,7 +52,6 @@ func (s *decoratorStorage) Get(ctx context.Context, key string) (GetResponse, bo
 }
 
 func (s *decoratorStorage) Put(ctx context.Context, request PutRequest) (string, error) {
-	//TODO use Tee
 	bodyBytes, err := io.ReadAll(request.Body)
 	if err != nil {
 		return "", fmt.Errorf("could not read body: %w", err)
