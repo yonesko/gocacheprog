@@ -33,7 +33,8 @@ func (a App) Run(ctx context.Context) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			panic(err)
+
+			panic(fmt.Sprintf("failed to decode request at: %d %v", reader.InputOffset(), err))
 		}
 		if request.Command == CmdPut {
 			if request.BodySize > 0 {
