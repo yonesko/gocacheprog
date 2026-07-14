@@ -7,6 +7,6 @@ generate_mocks:
 
 benchmark:
 	git show HEAD:bench.txt > old_bench.txt
-	go test -v -run=^$$  -count 15 -bench=. gocacheprog > bench.txt
+	go test -v -run=^$$  -count 15 -bench=. ./... > bench.txt
 	benchstat old_bench.txt bench.txt
 
