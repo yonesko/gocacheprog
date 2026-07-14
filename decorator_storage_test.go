@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"go.uber.org/mock/gomock"
 	"strings"
 	"testing"
+
+	"go.uber.org/mock/gomock"
 )
 
 func Test_DecoratorStorage(t *testing.T) {

@@ -27,7 +27,7 @@ func NewFileSystemStorage(dir string) Storage {
 	return &fileSystemStorage{dir: dir}
 }
 
-func (f fileSystemStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
+func (f fileSystemStorage) Get(_ context.Context, key string) (GetResponse, bool, error) {
 	diskPathBody, diskPathIndex := f.fileNames(key)
 	if isFileExists(diskPathBody) && isFileExists(diskPathIndex) {
 		var ind index
@@ -64,7 +64,7 @@ func (f fileSystemStorage) fileNames(key string) (diskPathBody, diskPathIndex st
 	return diskPathBody, diskPathIndex
 }
 
-func (f fileSystemStorage) Put(ctx context.Context, request PutRequest) (string, error) {
+func (f fileSystemStorage) Put(_ context.Context, request PutRequest) (string, error) {
 	if len(request.Key) == 0 {
 		return "", errors.New("empty key")
 	}
@@ -100,6 +100,6 @@ func writeFileAtomically(path string, body io.Reader) error {
 	return os.Rename(file.Name(), path)
 }
 
-func (f fileSystemStorage) Close(ctx context.Context) error {
+func (f fileSystemStorage) Close(context.Context) error {
 	return nil
 }
