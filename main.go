@@ -18,6 +18,7 @@ var (
 	logRequest     = flag.Bool("log-req", false, "log requests")
 	logMetrics     = flag.Bool("log-metrics", false, "log metrics")
 	dir            = flag.String("dir", "", "local dir of cache")
+	compress       = flag.Bool("compress", false, "compress cache files")
 	redisUser      = flag.String("r-usr", "", "redis user")
 	redisPassword  = flag.String("r-pwd", "", "redis password")
 	redisAddresses = flag.String("r-urls", "", "comma separated redis addresses")
@@ -70,23 +71,29 @@ func buildStorage() Storage {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", err)
 		storage := NewFileSystemStorage(*dir)
+		if *compress {
+			storage = NewCompressStorage(storage)
+		}
 		if *logMetrics {
 			return NewMetricsStorage(storage)
 		}
-		return storage
+		return NewLogStorage(storage)
 	}
 
-	decorator := NewDecoratorStorage(
+	storage := NewDecoratorStorage(
 		NewFileSystemStorage(*dir),
 		NewRedisStorage(
 			client,
 			*redisKeyPrefix,
 		),
 	)
-	if *logMetrics {
-		decorator = NewMetricsStorage(decorator)
+	if *compress {
+		storage = NewCompressStorage(storage)
 	}
-	return NewLogStorage(decorator)
+	if *logMetrics {
+		storage = NewMetricsStorage(storage)
+	}
+	return NewLogStorage(storage)
 }
 
 func connectRedis() (redis.UniversalClient, error) {
