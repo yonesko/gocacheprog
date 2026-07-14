@@ -71,7 +71,9 @@ func main() {
 
 func startTraceProfile() func() {
 	if *traceProfile == "" {
-		return nil
+		return func() {
+
+		}
 	}
 	f := must(os.Create(*traceProfile))
 	must0(trace.Start(f))
