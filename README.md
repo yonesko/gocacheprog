@@ -29,8 +29,13 @@ between different builds.
 
 ### Example Usage
 
-```yaml
+```shell
 GOCACHEPROG="gocacheprog -r-urls localhost:6379 -dir /tmp/cache" go build ./...
+```
+
+Capture requests
+```shell
+ GOCACHEPROG="$(realpath gocacheprog) -dir $(mktemp -d) -log-req" go build . 2> requests.ndjson
 ```
 
 ## Architecture
