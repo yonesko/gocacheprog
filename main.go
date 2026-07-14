@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime/trace"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -19,6 +20,7 @@ var (
 	logMetrics     = flag.Bool("log-metrics", false, "log metrics")
 	dir            = flag.String("dir", "", "local dir of cache")
 	compress       = flag.Bool("compress", false, "compress cache files")
+	traceProfile   = flag.String("traceprofile", "", "write trace profile to file")
 	redisUser      = flag.String("r-usr", "", "redis user")
 	redisPassword  = flag.String("r-pwd", "", "redis password")
 	redisAddresses = flag.String("r-urls", "", "comma separated redis addresses")
@@ -49,6 +51,7 @@ type (
 
 func main() {
 	flag.Parse()
+	defer startTraceProfile()()
 	if *dir == "" {
 		flag.Usage()
 		log.Fatal("dir is required")
@@ -64,6 +67,18 @@ func main() {
 	ctx := context.Background()
 	NewApp(inputReader, outputWriter, hex.EncodeToString, buildStorage()).
 		Run(ctx)
+}
+
+func startTraceProfile() func() {
+	if *traceProfile == "" {
+		return nil
+	}
+	f := must(os.Create(*traceProfile))
+	must0(trace.Start(f))
+	return func() {
+		trace.Stop()
+		f.Close()
+	}
 }
 
 func buildStorage() Storage {
