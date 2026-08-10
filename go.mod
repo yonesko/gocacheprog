@@ -1,4 +1,4 @@
-module github.com/yonesko/gocacheprog
+module git.sbercloud.tech/cp/go/utils/gocacheprog
 
 go 1.24
 
