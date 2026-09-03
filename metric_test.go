@@ -17,7 +17,7 @@ func Test(t *testing.T) {
 	mockStorage.EXPECT().Put(gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockStorage.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
 	// Wrap it with metrics
-	metricsStorage := NewMetricsStorage(mockStorage)
+	metricsStorage := NewMetricsStorage(mockStorage, 0)
 
 	// Simulate some operations
 	ctx := context.Background()
