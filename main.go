@@ -17,7 +17,7 @@ import (
 var (
 	logResponse    = flag.Bool("log-resp", false, "log responses")
 	logRequest     = flag.Bool("log-req", false, "log requests")
-	logMetrics     = flag.Bool("log-metrics", false, "log metrics")
+	logMetrics     = flag.Int("log-metrics", 0, "log metrics level, 0 - disabled, 1 - just time, 2 - all")
 	dir            = flag.String("dir", "", "local dir of cache")
 	compress       = flag.Bool("compress", false, "compress cache files")
 	traceProfile   = flag.String("traceprofile", "", "write trace profile to file")
@@ -86,13 +86,13 @@ func startTraceProfile() func() {
 func buildStorage() Storage {
 	client, err := connectRedis()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to connect to redis server, switching to local file system: %s\n", err)
+		fmt.Fprintf(os.Stderr, "gocacheprog: failed to connect to redis server, switching to local file system: %s\n", err)
 		storage := NewFileSystemStorage(*dir)
 		if *compress {
 			storage = NewCompressStorage(storage)
 		}
-		if *logMetrics {
-			return NewMetricsStorage(storage)
+		if *logMetrics > 0 {
+			return NewMetricsStorage(storage, *logMetrics)
 		}
 		return NewLogStorage(storage)
 	}
@@ -107,8 +107,8 @@ func buildStorage() Storage {
 	if *compress {
 		storage = NewCompressStorage(storage)
 	}
-	if *logMetrics {
-		storage = NewMetricsStorage(storage)
+	if *logMetrics > 0 {
+		storage = NewMetricsStorage(storage, *logMetrics)
 	}
 	return NewLogStorage(storage)
 }
