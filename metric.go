@@ -33,31 +33,29 @@ type (
 		PutTotalSize  int64
 		sync.Mutex
 		Storage
-		logMetricsLevel int
 	}
 )
 
-func NewMetricsStorage(storage Storage, logMetricsLevel int) Storage {
+func NewMetricsStorage(storage Storage) Storage {
 	return &metrics{
-		DecoratedName:   reflect.TypeOf(storage).String(),
-		GetCmd:          0,
-		GetMissCmd:      0,
-		PutCmd:          0,
-		CloseCmd:        0,
-		Errors:          0,
-		GetCmdMinTime:   math.MaxInt64,
-		GetCmdAvgTime:   0,
-		GetCmdMaxTime:   math.MinInt64,
-		PutCmdMinTime:   math.MaxInt64,
-		PutCmdAvgTime:   0,
-		PutCmdMaxTime:   math.MinInt64,
-		GetCmdTimeSum:   0,
-		PutCmdTimeSum:   0,
-		PutMinSize:      math.MaxInt64,
-		PutMaxSize:      math.MinInt64,
-		PutTotalSize:    0,
-		Storage:         storage,
-		logMetricsLevel: logMetricsLevel,
+		DecoratedName: reflect.TypeOf(storage).String(),
+		GetCmd:        0,
+		GetMissCmd:    0,
+		PutCmd:        0,
+		CloseCmd:      0,
+		Errors:        0,
+		GetCmdMinTime: math.MaxInt64,
+		GetCmdAvgTime: 0,
+		GetCmdMaxTime: math.MinInt64,
+		PutCmdMinTime: math.MaxInt64,
+		PutCmdAvgTime: 0,
+		PutCmdMaxTime: math.MinInt64,
+		GetCmdTimeSum: 0,
+		PutCmdTimeSum: 0,
+		PutMinSize:    math.MaxInt64,
+		PutMaxSize:    math.MinInt64,
+		PutTotalSize:  0,
+		Storage:       storage,
 	}
 }
 
@@ -110,25 +108,6 @@ func (s *metrics) Close(ctx context.Context) error {
 	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
 	s.GetCmdAvgTime = safeDiv(s.GetCmdTimeSum, s.GetCmd)
 
-	if s.logMetricsLevel == 1 {
-		return s.printStat()
-	}
-	if s.logMetricsLevel == 2 {
-		return s.printAllStat()
-	}
-
-	return nil
-
-}
-
-func (s *metrics) printStat() error {
-	fmt.Fprintf(os.Stderr, "gocacheprog: Gocacheprog get: %v put: %v\n",
-		time.Duration(s.GetCmdTimeSum).Truncate(time.Millisecond).String(),
-		time.Duration(s.PutCmdTimeSum).Truncate(time.Millisecond).String())
-	return nil
-}
-
-func (s *metrics) printAllStat() error {
 	// Initialize tabwriter
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 2, ' ', 0)
 
