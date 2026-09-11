@@ -1,0 +1,7 @@
+stages:
+  - test
+
+test:
+  stage: test
+  image: clp-docker.pkg.sbercloud.tech/gocheck:latest
+  script: go test ./...
