@@ -95,6 +95,7 @@ func writeFileAtomically(path string, body io.Reader) error {
 	defer file.Close()
 	_, err = io.Copy(file, body)
 	if err != nil {
+		os.Remove(file.Name())
 		return err
 	}
 	return os.Rename(file.Name(), path)

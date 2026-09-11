@@ -88,29 +88,28 @@ func buildStorage() Storage {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gocacheprog: failed to connect to redis server, switching to local file system: %s\n", err)
 		storage := NewFileSystemStorage(*dir)
-		if *compress {
-			storage = NewCompressStorage(storage)
-		}
 		if *logMetrics > 0 {
 			return NewMetricsStorage(storage, *logMetrics)
 		}
-		return NewLogStorage(storage)
+		return storage
 	}
 
-	storage := NewDecoratorStorage(
-		NewFileSystemStorage(*dir),
-		NewRedisStorage(
-			client,
-			*redisKeyPrefix,
-		),
+	externalStorage := NewRedisStorage(
+		client,
+		*redisKeyPrefix,
 	)
 	if *compress {
-		storage = NewCompressStorage(storage)
+		externalStorage = NewCompressStorage(externalStorage)
 	}
+	storage := NewDecoratorStorage(
+		NewFileSystemStorage(*dir),
+		externalStorage,
+	)
+
 	if *logMetrics > 0 {
 		storage = NewMetricsStorage(storage, *logMetrics)
 	}
-	return NewLogStorage(storage)
+	return storage
 }
 
 func connectRedis() (redis.UniversalClient, error) {

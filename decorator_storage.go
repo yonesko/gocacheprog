@@ -83,5 +83,5 @@ func (s *decoratorStorage) Close(ctx context.Context) error {
 	if err1 == nil && err2 == nil {
 		return nil
 	}
-	return fmt.Errorf("%w %w", err1, err2)
+	return fmt.Errorf("fileSystemStorageErr=%w externalStorageErr=%w", err1, err2)
 }

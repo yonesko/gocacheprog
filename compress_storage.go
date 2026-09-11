@@ -19,19 +19,21 @@ func NewCompressStorage(storage Storage) Storage {
 
 func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool, error) {
 	getResponse, ok, err := c.Storage.Get(ctx, key)
-	if err != nil {
-		return GetResponse{}, false, err
+	if err != nil || !ok {
+		return getResponse, ok, err
 	}
+	decoder, err := zstd.NewReader(getResponse.Body)
+	if err != nil {
+		return GetResponse{}, false, fmt.Errorf("get: zstd decoder: %w", err)
+	}
+	defer decoder.Close()
 	buffer := &bytes.Buffer{}
-	encoder, err := zstd.NewReader(buffer)
+	_, err = io.Copy(buffer, decoder)
 	if err != nil {
-		return GetResponse{}, false, fmt.Errorf("get: zstd compressor: %w", err)
+		return GetResponse{}, false, fmt.Errorf("get: zstd decompress: %w", err)
 	}
-	_, err = io.Copy(buffer, encoder)
-	if err != nil {
-		return GetResponse{}, false, fmt.Errorf("get: zstd decompressor: %w", err)
-	}
-	return getResponse, ok, err
+	getResponse.Body = buffer
+	return getResponse, ok, nil
 }
 
 func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, error) {
@@ -40,10 +42,12 @@ func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, e
 	if err != nil {
 		return "", fmt.Errorf("put: zstd compressor: %w", err)
 	}
-	defer encoder.Close()
 	_, err = io.Copy(encoder, request.Body)
 	if err != nil {
 		return "", fmt.Errorf("put: zstd compressor: %w", err)
+	}
+	if err = encoder.Close(); err != nil {
+		return "", fmt.Errorf("put: zstd close: %w", err)
 	}
 	return c.Storage.Put(ctx, PutRequest{
 		Key:      request.Key,
