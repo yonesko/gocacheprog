@@ -18,10 +18,11 @@ type (
 		outputWriter io.Writer
 		keyConverter func(src []byte) string
 		storage      Storage
+		respMu       sync.Mutex
 	}
 )
 
-func (a App) Run(ctx context.Context) {
+func (a *App) Run(ctx context.Context) {
 	waitGroup := sync.WaitGroup{}
 	reader := json.NewDecoder(bufio.NewReader(a.inputReader))
 	//handshake
@@ -89,16 +90,18 @@ func (a App) Run(ctx context.Context) {
 	}
 }
 
-func (a App) resp(response Response, err error) {
+func (a *App) resp(response Response, err error) {
 	if err != nil {
 		response.Err = err.Error()
 	}
 	b := must(json.Marshal(response))
+	a.respMu.Lock()
+	defer a.respMu.Unlock()
 	must(a.outputWriter.Write(append(b, '\n')))
 }
 
-func NewApp(inputReader io.Reader, outputWriter io.Writer, keyConverter func(src []byte) string, storage Storage) App {
-	return App{
+func NewApp(inputReader io.Reader, outputWriter io.Writer, keyConverter func(src []byte) string, storage Storage) *App {
+	return &App{
 		inputReader:  inputReader,
 		outputWriter: outputWriter,
 		keyConverter: keyConverter,
