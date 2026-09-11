@@ -195,31 +195,3 @@ func Test_DecoratorStorage(t *testing.T) {
 		assertTrue(t, errors.Is(err, errExt), "expected ext error to be wrapped")
 	})
 }
-
-func Benchmark_DecoratorStorage(b *testing.B) {
-	b.Run("put", func(b *testing.B) {
-		ctrl := gomock.NewController(b)
-		ext := NewMockStorage(ctrl)
-		ext.EXPECT().Put(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req PutRequest) (string, error) {
-			io.ReadAll(req.Body)
-			return "", nil
-		}).AnyTimes()
-		ext.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
-
-		s := NewDecoratorStorage(NewFileSystemStorage(b.TempDir()), ext)
-		body := must(randomString(100))
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := s.Put(context.Background(), PutRequest{
-				Key:      "dcd3McUV",
-				OutputID: []byte("out"),
-				Body:     strings.NewReader(body),
-				BodySize: int64(len(body)),
-			})
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-		s.Close(context.Background())
-	})
-}

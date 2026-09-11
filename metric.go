@@ -7,7 +7,6 @@ import (
 	"os"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"text/tabwriter"
 	"time"
 )
@@ -31,7 +30,7 @@ type (
 		PutMinSize    int64
 		PutMaxSize    int64
 		PutTotalSize  int64
-		sync.Mutex
+		mu            sync.Mutex
 		Storage
 		logMetricsLevel int
 	}
@@ -40,75 +39,72 @@ type (
 func NewMetricsStorage(storage Storage, logMetricsLevel int) Storage {
 	return &metrics{
 		DecoratedName:   reflect.TypeOf(storage).String(),
-		GetCmd:          0,
-		GetMissCmd:      0,
-		PutCmd:          0,
-		CloseCmd:        0,
-		Errors:          0,
 		GetCmdMinTime:   math.MaxInt64,
-		GetCmdAvgTime:   0,
 		GetCmdMaxTime:   math.MinInt64,
 		PutCmdMinTime:   math.MaxInt64,
-		PutCmdAvgTime:   0,
 		PutCmdMaxTime:   math.MinInt64,
-		GetCmdTimeSum:   0,
-		PutCmdTimeSum:   0,
 		PutMinSize:      math.MaxInt64,
 		PutMaxSize:      math.MinInt64,
-		PutTotalSize:    0,
 		Storage:         storage,
 		logMetricsLevel: logMetricsLevel,
 	}
 }
 
 func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error) {
-	s.Lock()
-	defer s.Unlock()
-	atomic.AddInt64(&s.GetCmd, 1)
 	now := time.Now()
-	entry, ok, err := s.Storage.Get(ctx, key)
+	entry, ok, err := s.Storage.Get(ctx, key) // долгий вызов — вне лока
+	elapsed := int64(time.Since(now))
+
+	s.mu.Lock()
+	s.GetCmd++
 	if !ok {
-		atomic.AddInt64(&s.GetMissCmd, 1)
+		s.GetMissCmd++
 	}
 	if err != nil {
-		atomic.AddInt64(&s.Errors, 1)
+		s.Errors++
 	}
-	elapsed := int64(time.Since(now))
 	s.GetCmdTimeSum += elapsed
 	s.GetCmdMinTime = min(s.GetCmdMinTime, elapsed)
 	s.GetCmdMaxTime = max(s.GetCmdMaxTime, elapsed)
+	s.mu.Unlock()
+
 	return entry, ok, err
 }
 
 func (s *metrics) Put(ctx context.Context, request PutRequest) (string, error) {
-	s.Lock()
-	defer s.Unlock()
-	atomic.AddInt64(&s.PutCmd, 1)
 	now := time.Now()
-	path, err := s.Storage.Put(ctx, request)
-	if err != nil {
-		atomic.AddInt64(&s.Errors, 1)
-	}
+	path, err := s.Storage.Put(ctx, request) // долгий вызов — вне лока
 	elapsed := int64(time.Since(now))
+
+	s.mu.Lock()
+	s.PutCmd++
+	if err != nil {
+		s.Errors++
+	}
 	s.PutCmdTimeSum += elapsed
 	s.PutCmdMinTime = min(s.PutCmdMinTime, elapsed)
 	s.PutCmdMaxTime = max(s.PutCmdMaxTime, elapsed)
 	s.PutMaxSize = max(s.PutMaxSize, request.BodySize)
 	s.PutMinSize = min(s.PutMinSize, request.BodySize)
 	s.PutTotalSize += request.BodySize
+	s.mu.Unlock()
+
 	return path, err
 }
 
+// Close вызывается один раз после waitGroup.Wait() в app.go —
+// все горутины уже завершены, лок нужен только для CloseCmd/Errors.
 func (s *metrics) Close(ctx context.Context) error {
-	s.Lock()
-	defer s.Unlock()
 	err := s.Storage.Close(ctx)
-	atomic.AddInt64(&s.CloseCmd, 1)
+
+	s.mu.Lock()
+	s.CloseCmd++
 	if err != nil {
-		atomic.AddInt64(&s.Errors, 1)
+		s.Errors++
 	}
-	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
 	s.GetCmdAvgTime = safeDiv(s.GetCmdTimeSum, s.GetCmd)
+	s.PutCmdAvgTime = safeDiv(s.PutCmdTimeSum, s.PutCmd)
+	s.mu.Unlock()
 
 	if s.logMetricsLevel == 1 {
 		return s.printStat()
@@ -116,9 +112,7 @@ func (s *metrics) Close(ctx context.Context) error {
 	if s.logMetricsLevel == 2 {
 		return s.printAllStat()
 	}
-
 	return nil
-
 }
 
 func (s *metrics) printStat() error {
@@ -129,10 +123,8 @@ func (s *metrics) printStat() error {
 }
 
 func (s *metrics) printAllStat() error {
-	// Initialize tabwriter
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 2, ' ', 0)
 
-	// Print overall stats table
 	fmt.Fprintln(w, "=== OVERALL STATS ===")
 	fmt.Fprintln(w, "Metric\tValue")
 	fmt.Fprintln(w, "------\t-----")
@@ -144,7 +136,6 @@ func (s *metrics) printAllStat() error {
 	fmt.Fprintf(w, "Errors\t%d\n", s.Errors)
 	fmt.Fprintln(w, "")
 
-	// Print GET operations stats table
 	fmt.Fprintln(w, "=== GET OPERATIONS ===")
 	fmt.Fprintln(w, "Metric\tValue\t")
 	fmt.Fprintln(w, "------\t-----\t")
@@ -161,7 +152,6 @@ func (s *metrics) printAllStat() error {
 	}
 	fmt.Fprintln(w, "")
 
-	// Print PUT operations stats table
 	fmt.Fprintln(w, "=== PUT OPERATIONS ===")
 	fmt.Fprintln(w, "Metric\tValue\t")
 	fmt.Fprintln(w, "------\t-----\t")
