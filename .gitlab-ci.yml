@@ -3,5 +3,5 @@ stages:
 
 test:
   stage: test
-  image: clp-docker.pkg.sbercloud.tech/gocheck:latest
+  image: clp-docker.pkg.sbercloud.tech/gocheck:v0.23.1
   script: go test ./...
