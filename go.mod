@@ -1,6 +1,6 @@
 module git.sbercloud.tech/cp/go/utils/gocacheprog
 
-go 1.25
+go 1.24
 
 require (
 	github.com/klauspost/compress v1.19.0
