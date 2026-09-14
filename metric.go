@@ -19,13 +19,16 @@ type (
 		PutCmd        int64
 		CloseCmd      int64
 		Errors        int64
+
 		GetCmdMinTime int64
 		GetCmdAvgTime int64
 		GetCmdMaxTime int64
+		GetCmdTimeSum int64
+		GetTotalSize  int64
+
 		PutCmdMinTime int64
 		PutCmdAvgTime int64
 		PutCmdMaxTime int64
-		GetCmdTimeSum int64
 		PutCmdTimeSum int64
 		PutMinSize    int64
 		PutMaxSize    int64
@@ -66,6 +69,7 @@ func (s *metrics) Get(ctx context.Context, key string) (GetResponse, bool, error
 	s.GetCmdTimeSum += elapsed
 	s.GetCmdMinTime = min(s.GetCmdMinTime, elapsed)
 	s.GetCmdMaxTime = max(s.GetCmdMaxTime, elapsed)
+	s.GetTotalSize += entry.BodySize
 	s.mu.Unlock()
 
 	return entry, ok, err
@@ -143,6 +147,7 @@ func (s *metrics) printAllStat() error {
 		fmt.Fprintf(w, "Min Time\t%s\n", time.Duration(s.GetCmdMinTime).String())
 		fmt.Fprintf(w, "Max Time\t%s\n", time.Duration(s.GetCmdMaxTime).String())
 		fmt.Fprintf(w, "Avg Time\t%s\n", time.Duration(s.GetCmdAvgTime).String())
+		fmt.Fprintf(w, "Total Size\t%s\n", humanSize(s.GetTotalSize))
 		fmt.Fprintf(w, "Total Time\t%s\n", time.Duration(s.GetCmdTimeSum).String())
 	} else {
 		fmt.Fprintln(w, "Min Time\tN/A")
