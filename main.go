@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime/pprof"
 	"runtime/trace"
 	"strings"
 
@@ -20,6 +21,7 @@ var (
 	logMetrics     = flag.Int("log-metrics", 0, "log metrics level, 0 - disabled, 1 - just time, 2 - all")
 	dir            = flag.String("dir", "", "local dir of cache")
 	compress       = flag.Bool("compress", false, "compress cache files")
+	cpuProfile     = flag.String("cpuprofile", "", "write cpu profile to file")
 	traceProfile   = flag.String("traceprofile", "", "write trace profile to file")
 	redisUser      = flag.String("r-usr", "", "redis user")
 	redisPassword  = flag.String("r-pwd", "", "redis password")
@@ -52,6 +54,7 @@ type (
 func main() {
 	flag.Parse()
 	defer startTraceProfile()()
+	defer startCpuProfile()()
 	if *dir == "" {
 		flag.Usage()
 		log.Fatal("dir is required")
@@ -79,6 +82,20 @@ func startTraceProfile() func() {
 	must0(trace.Start(f))
 	return func() {
 		trace.Stop()
+		f.Close()
+	}
+}
+
+func startCpuProfile() func() {
+	if *cpuProfile == "" {
+		return func() {
+
+		}
+	}
+	f := must(os.Create(*cpuProfile))
+	must0(pprof.StartCPUProfile(f))
+	return func() {
+		pprof.StopCPUProfile()
 		f.Close()
 	}
 }
