@@ -10,7 +10,7 @@ trap 'rm -rf "$CACHE_DIR"' EXIT
 echo "Cloning a large Go project (prometheus) for realistic build test..."
 git clone --depth 1 https://github.com/prometheus/prometheus.git /tmp/prometheus
 
-GOCACHEPROG_CMD="./gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR"
+GOCACHEPROG_CMD="$PWD/gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR"
 
 GOCACHE_PARENT=$(mktemp -d)
 
