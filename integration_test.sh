@@ -7,17 +7,8 @@ go build -o gocacheprog .
 CACHE_DIR=$(mktemp -d)
 trap 'rm -rf "$CACHE_DIR"' EXIT
 
-GOVERSION=$(go version | awk '{print $3}')
-echo "Downloading Go source $GOVERSION for build test..."
-# Use curl if available, fall back to wget
-curl -fsSL "https://go.dev/dl/${GOVERSION}.src.tar.gz" | tar -C /tmp -xzf - || \
-    wget -qO- "https://go.dev/dl/${GOVERSION}.src.tar.gz" | tar -C /tmp -xzf -
-
-export GOROOT=/tmp/go
-
 GOCACHEPROG_CMD="./gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR"
 
-# Temporary parent directory for per-run GOCACHE directories
 GOCACHE_PARENT=$(mktemp -d)
 
 run_build() {
