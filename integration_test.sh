@@ -7,6 +7,9 @@ go build -o gocacheprog .
 CACHE_DIR=$(mktemp -d)
 trap 'rm -rf "$CACHE_DIR"' EXIT
 
+echo "Cloning a large Go project (prometheus) for realistic build test..."
+git clone --depth 1 https://github.com/prometheus/prometheus.git /tmp/prometheus
+
 GOCACHEPROG_CMD="./gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR"
 
 GOCACHE_PARENT=$(mktemp -d)
@@ -21,7 +24,10 @@ run_build() {
 
     local start end duration_ms
     start=$(date +%s%N)
-    GOCACHE="$gocache" GOCACHEPROG="$GOCACHEPROG_CMD" go build -a std
+    (
+        cd /tmp/prometheus
+        GOCACHE="$gocache" GOCACHEPROG="$GOCACHEPROG_CMD" go build -a ./cmd/prometheus
+    )
     end=$(date +%s%N)
 
     duration_ms=$(( (end - start) / 1000000 ))
@@ -34,11 +40,11 @@ warm_time_file=$(mktemp)
 
 # 1st run – cold cache: Valkey is empty, everything compiles from scratch
 # and artifacts are uploaded to Valkey.
-run_build "Cold build (stdlib)" "$cold_time_file"
+run_build "Cold build (prometheus)" "$cold_time_file"
 
 # 2nd run – warm cache: local GOCACHE is fresh, but Valkey still holds
 # artifacts from the 1st run, so gocacheprog serves them.
-run_build "Warm build (stdlib)" "$warm_time_file"
+run_build "Warm build (prometheus)" "$warm_time_file"
 
 COLD_MS=$(cat "$cold_time_file")
 WARM_MS=$(cat "$warm_time_file")
