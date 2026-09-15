@@ -22,17 +22,17 @@ run_build() {
     local gocache
     gocache=$(mktemp -d "$GOCACHE_PARENT/gocache.XXXXXX")
 
-    local start end duration_ms
-    start=$(date +%s%N)
+    local start end duration_s
+    start=$(date +%s)
     (
         cd /tmp/prometheus
         GOCACHE="$gocache" GOCACHEPROG="$GOCACHEPROG_CMD" go build -a ./cmd/prometheus
     )
-    end=$(date +%s%N)
+    end=$(date +%s)
 
-    duration_ms=$(( (end - start) / 1000000 ))
-    echo "$duration_ms" > "$time_file"
-    echo "$label duration: ${duration_ms}ms"
+    duration_s=$(( end - start ))
+    echo "$duration_s" > "$time_file"
+    echo "$label duration: ${duration_s}s"
 }
 
 cold_time_file=$(mktemp)
@@ -46,16 +46,22 @@ run_build "Cold build (prometheus)" "$cold_time_file"
 # artifacts from the 1st run, so gocacheprog serves them.
 run_build "Warm build (prometheus)" "$warm_time_file"
 
-COLD_MS=$(cat "$cold_time_file")
-WARM_MS=$(cat "$warm_time_file")
+COLD_S=$(cat "$cold_time_file")
+WARM_S=$(cat "$warm_time_file")
 
 echo ""
 echo "Results:"
-echo "  Cold build: ${COLD_MS}ms"
-echo "  Warm build: ${WARM_MS}ms"
+echo "  Cold build: ${COLD_S}s"
+echo "  Warm build: ${WARM_S}s"
+
+# Guard: if cold build reports 0 seconds, timing is broken
+if [ "$COLD_S" -eq 0 ]; then
+    echo "FAILURE: Cold build took 0 seconds — timing is broken"
+    exit 1
+fi
 
 # Assert: warm build must be at least 2× faster than cold build
-if [ "$WARM_MS" -le $(( COLD_MS / 2 )) ]; then
+if [ "$WARM_S" -le $(( COLD_S / 2 )) ]; then
     echo "SUCCESS: Warm build is at least 2x faster than cold build"
     exit 0
 else
