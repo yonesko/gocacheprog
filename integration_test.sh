@@ -1,28 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build the gocacheprog binary that will act as the cache proxy
 echo "Building gocacheprog binary..."
 go build -o gocacheprog .
 
-# Temporary directory used by gocacheprog for local file-system cache
 CACHE_DIR=$(mktemp -d)
 trap 'rm -rf "$CACHE_DIR"' EXIT
 
+GOVERSION=$(go version | awk '{print $3}')
+echo "Downloading Go source $GOVERSION for build test..."
+# Use curl if available, fall back to wget
+curl -fsSL "https://go.dev/dl/${GOVERSION}.src.tar.gz" | tar -C /tmp -xzf - || \
+    wget -qO- "https://go.dev/dl/${GOVERSION}.src.tar.gz" | tar -C /tmp -xzf -
+
+export GOROOT=/tmp/go
+
 GOCACHEPROG_CMD="./gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR"
 
-# Helper: run a timed go build -a and save elapsed ms to a file
+# Temporary parent directory for per-run GOCACHE directories
+GOCACHE_PARENT=$(mktemp -d)
+
 run_build() {
     local label=$1
     local time_file=$2
 
     echo "=== $label ==="
-    go clean -cache
-    rm -rf "$CACHE_DIR"/*
+    local gocache
+    gocache=$(mktemp -d "$GOCACHE_PARENT/gocache.XXXXXX")
 
     local start end duration_ms
     start=$(date +%s%N)
-    GOCACHEPROG="$GOCACHEPROG_CMD" go build -a .
+    GOCACHE="$gocache" GOCACHEPROG="$GOCACHEPROG_CMD" go build -a std
     end=$(date +%s%N)
 
     duration_ms=$(( (end - start) / 1000000 ))
@@ -33,13 +41,13 @@ run_build() {
 cold_time_file=$(mktemp)
 warm_time_file=$(mktemp)
 
-# 1st run – cold cache: nothing is in Valkey yet, so every artifact is
-# compiled from scratch and then uploaded.
-run_build "Cold build" "$cold_time_file"
+# 1st run – cold cache: Valkey is empty, everything compiles from scratch
+# and artifacts are uploaded to Valkey.
+run_build "Cold build (stdlib)" "$cold_time_file"
 
-# 2nd run – warm cache: Go's local cache is cleared, but Valkey still holds
-# the artifacts from the 1st run, so gocacheprog can serve them.
-run_build "Warm build" "$warm_time_file"
+# 2nd run – warm cache: local GOCACHE is fresh, but Valkey still holds
+# artifacts from the 1st run, so gocacheprog serves them.
+run_build "Warm build (stdlib)" "$warm_time_file"
 
 COLD_MS=$(cat "$cold_time_file")
 WARM_MS=$(cat "$warm_time_file")
@@ -49,7 +57,7 @@ echo "Results:"
 echo "  Cold build: ${COLD_MS}ms"
 echo "  Warm build: ${WARM_MS}ms"
 
-# Assert: warm build must be at least 2x faster than cold build
+# Assert: warm build must be at least 2× faster than cold build
 if [ "$WARM_MS" -le $(( COLD_MS / 2 )) ]; then
     echo "SUCCESS: Warm build is at least 2x faster than cold build"
     exit 0
