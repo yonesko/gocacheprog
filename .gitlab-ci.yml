@@ -4,4 +4,14 @@ stages:
 test:
   stage: test
   image: clp-docker.pkg.sbercloud.tech/gocheck:v0.23.1
-  script: go test ./...
+  script:
+    - go test ./...
+
+integration_test:
+  stage: test
+  image: clp-docker.pkg.sbercloud.tech/gocheck:v0.23.1
+  services:
+    - name: valkey/valkey:9.1.0
+      alias: valkey
+  script:
+    - ./integration_test.sh
