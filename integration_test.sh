@@ -9,24 +9,20 @@ trap 'rm -rf "$CACHE_DIR"' EXIT
 
 echo "Cloning a large Go project (prometheus) for realistic build test..."
 git clone --depth 1 https://github.com/prometheus/prometheus.git /tmp/prometheus
+#cp -r . /tmp/prometheus
 
 GOCACHEPROG_CMD="$PWD/gocacheprog -r-urls valkey:6379 -dir $CACHE_DIR -log-metrics 2 -compress"
-
-GOCACHE_PARENT=$(mktemp -d)
 
 run_build() {
     local label=$1
     local time_file=$2
 
     echo "=== $label ==="
-    local gocache
-    gocache=$(mktemp -d "$GOCACHE_PARENT/gocache.XXXXXX")
-
     local start end duration_s
     start=$(date +%s)
     (
         cd /tmp/prometheus
-        GOCACHE="$gocache" GOCACHEPROG="$GOCACHEPROG_CMD" go build -a ./cmd/prometheus
+        GOCACHEPROG="$GOCACHEPROG_CMD" go build ./...
     )
     end=$(date +%s)
 
