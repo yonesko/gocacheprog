@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -50,76 +49,68 @@ func (r redisStorage) get(ctx context.Context, key string) (io.Reader, meta, boo
 	if strings.TrimSpace(key) == "" {
 		return nil, meta{}, false, fmt.Errorf("empty key")
 	}
-	keyBody, keyMeta := r.keyNames(key)
-	bodyGet := r.cluster.Get(ctx, keyBody)
-	err := bodyGet.Err()
-	if errors.Is(err, redis.Nil) {
+	_key := r.keyNames(key)
+	res, err := r.cluster.HMGet(ctx, _key, "body", "meta").Result()
+	if err != nil {
+		return nil, meta{}, false, fmt.Errorf("redis hmget error: %w %s", err, _key)
+	}
+
+	if len(res) < 2 || res[0] == nil || res[1] == nil {
 		return nil, meta{}, false, nil
 	}
-	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis bodyGet error: %w %s", err, key)
+
+	bodyStr, ok1 := res[0].(string)
+	metaStr, ok2 := res[1].(string)
+	if !ok1 || !ok2 {
+		return nil, meta{}, false, fmt.Errorf("redis data type assertion error for key: %s", _key)
 	}
-	metaGet := r.cluster.Get(ctx, keyMeta)
-	err = metaGet.Err()
-	if errors.Is(err, redis.Nil) {
-		return nil, meta{}, false, nil
-	}
-	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w %s", err, key)
-	}
+
 	var m meta
-	metaBytes, err := metaGet.Bytes()
+	err = json.Unmarshal([]byte(metaStr), &m)
 	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis metaGet error: %w %s", err, key)
+		return nil, meta{}, false, fmt.Errorf("redis meta Unmarshal error: %w %s", err, _key)
 	}
-	err = json.Unmarshal(metaBytes, &m)
-	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis metaGet Unmarshal error: %w %s", err, key)
-	}
-	b, err := bodyGet.Bytes()
-	if err != nil {
-		return nil, meta{}, false, fmt.Errorf("redis bodyGet Bytes error: %w %s", err, key)
-	}
-	return bytes.NewReader(b), m, true, nil
+
+	// Возвращаем ридер на основе байт тела
+	return bytes.NewReader([]byte(bodyStr)), m, true, nil
 }
 
 func (r redisStorage) Put(ctx context.Context, request PutRequest) (string, error) {
 	const expiration = time.Hour * 24 * 7
-	keyBody, keyMeta := r.keyNames(request.Key)
+	key := r.keyNames(request.Key)
 	b, err := io.ReadAll(request.Body)
 	if err != nil {
 		return "", fmt.Errorf("redis bodyReadAll error: %w %s", err, request.Key)
 	}
-	set := r.cluster.Set(ctx, keyBody, b, expiration)
-	err = set.Err()
-	if err != nil {
-		return "", fmt.Errorf("redis set error: %w %s", err, request.Key)
-	}
+
 	metaBytes, err := json.Marshal(meta{OutputID: request.OutputID, Size: request.BodySize})
 	if err != nil {
 		return "", fmt.Errorf("redis metaMarshal error: %w %s", err, request.Key)
 	}
-	set = r.cluster.Set(ctx, keyMeta, metaBytes, expiration)
-	err = set.Err()
+
+	pipe := r.cluster.Pipeline()
+	pipe.HSet(ctx, key, map[string]any{
+		"body": b,
+		"meta": metaBytes,
+	})
+	pipe.Expire(ctx, key, expiration)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return "", fmt.Errorf("redis set error: %w %s", err, request.Key)
+		return "", fmt.Errorf("redis hset error: %w %s", err, key)
 	}
-	//no disk path to return
+
 	return "", nil
 }
-
 func (r redisStorage) Close(_ context.Context) error {
 	return r.cluster.Close()
 }
 
-func (r redisStorage) keyNames(key string) (keyBody, keyMeta string) {
+func (r redisStorage) keyNames(key string) string {
 	parts := []string{"gocacheprog"}
 	if r.redisKeyPrefix != "" {
 		parts = append(parts, r.redisKeyPrefix)
 	}
 	parts = append(parts, key)
 	key = path.Join(parts...)
-	keyBody = key + "-o"
-	keyMeta = key + "-i"
-	return keyBody, keyMeta
+	return key
 }
