@@ -59,8 +59,37 @@ fi
 # Assert: warm build must be at least 2× faster than cold build
 if [ "$WARM_S" -le $(( COLD_S / 2 )) ]; then
     echo "SUCCESS: Warm build is at least 2x faster than cold build"
-    exit 0
 else
     echo "FAILURE: Warm build is NOT at least 2x faster than cold build"
     exit 1
 fi
+
+# Verify that Valkey actually contains cached data
+echo ""
+echo "Checking Valkey contents..."
+cat > check_valkey.go <<'EOF'
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    "github.com/redis/go-redis/v9"
+)
+
+func main() {
+    client := redis.NewClient(&redis.Options{Addr: "valkey:6379"})
+    keys, err := client.Keys(context.Background(), "*").Result()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error connecting to Valkey: %v\n", err)
+        os.Exit(1)
+    }
+    if len(keys) == 0 {
+        fmt.Println("FAILURE: Valkey is empty, no cache keys found")
+        os.Exit(1)
+    }
+    fmt.Printf("Valkey contains %d cache keys\n", len(keys))
+}
+EOF
+go run check_valkey.go
+rm check_valkey.go
