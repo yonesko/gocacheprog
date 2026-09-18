@@ -104,7 +104,6 @@ func Benchmark_App(b *testing.B) {
 		b.StopTimer()
 
 		dir1 := must(os.MkdirTemp("", "gocacheprog-bench-*"))
-		dir2 := must(os.MkdirTemp("", "gocacheprog-bench-*"))
 		storage := NewFileSystemStorage(dir1)
 
 		// seed the "warm" portion of the cache
@@ -125,6 +124,5 @@ func Benchmark_App(b *testing.B) {
 
 		b.StopTimer()
 		os.RemoveAll(dir1)
-		os.RemoveAll(dir2)
 	}
 }
