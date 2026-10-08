@@ -101,6 +101,13 @@ func startCpuProfile() func() {
 }
 
 func buildStorage() Storage {
+	if *redisAddresses == "" {
+		storage := NewFileSystemStorage(*dir)
+		if *logMetrics > 0 {
+			return NewMetricsStorage(storage, *logMetrics)
+		}
+		return storage
+	}
 	client, err := connectRedis()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gocacheprog: failed to connect to redis server, switching to local file system: %s\n", err)
