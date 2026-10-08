@@ -5,8 +5,30 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/klauspost/compress/zstd"
+)
+
+var (
+	zstdDecoderPool = sync.Pool{
+		New: func() any {
+			reader, err := zstd.NewReader(nil)
+			if err != nil {
+				panic(err)
+			}
+			return reader
+		},
+	}
+	zstdEncoderPool = sync.Pool{
+		New: func() any {
+			writer, err := zstd.NewWriter(nil)
+			if err != nil {
+				panic(err)
+			}
+			return writer
+		},
+	}
 )
 
 type compressStorage struct {
@@ -22,11 +44,11 @@ func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool
 	if err != nil || !ok {
 		return getResponse, ok, err
 	}
-	decoder, err := zstd.NewReader(getResponse.Body)
+	decoder := zstdDecoderPool.Get().(*zstd.Decoder)
+	err = decoder.Reset(getResponse.Body)
 	if err != nil {
-		return GetResponse{}, false, fmt.Errorf("get: zstd decoder: %w", err)
+		return getResponse, false, fmt.Errorf("get: zstd decoder: %w", err)
 	}
-	defer decoder.Close()
 	buffer := &bytes.Buffer{}
 	_, err = io.Copy(buffer, decoder)
 	if err != nil {
@@ -38,16 +60,11 @@ func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool
 
 func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, error) {
 	buffer := &bytes.Buffer{}
-	encoder, err := zstd.NewWriter(buffer)
+	encoder := zstdEncoderPool.Get().(*zstd.Encoder)
+	encoder.Reset(buffer)
+	_, err := io.Copy(encoder, request.Body)
 	if err != nil {
 		return "", fmt.Errorf("put: zstd compressor: %w", err)
-	}
-	_, err = io.Copy(encoder, request.Body)
-	if err != nil {
-		return "", fmt.Errorf("put: zstd compressor: %w", err)
-	}
-	if err = encoder.Close(); err != nil {
-		return "", fmt.Errorf("put: zstd close: %w", err)
 	}
 	return c.Storage.Put(ctx, PutRequest{
 		Key:      request.Key,
