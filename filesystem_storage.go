@@ -88,7 +88,7 @@ func (f fileSystemStorage) Put(_ context.Context, request PutRequest) (string, e
 }
 
 func writeFileAtomically(path string, body io.Reader) error {
-	file, err := os.CreateTemp("", "*")
+	file, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
 	if err != nil {
 		return err
 	}
