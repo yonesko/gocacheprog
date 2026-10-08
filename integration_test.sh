@@ -22,7 +22,7 @@ run_build() {
     start=$(date +%s)
     (
         cd /tmp/prometheus
-        GOCACHEPROG="$GOCACHEPROG_CMD" go build ./...
+        GOCACHEPROG="$GOCACHEPROG_CMD" go build -trimpath -ldflags="-w -s" ./...
     )
     end=$(date +%s)
 

@@ -56,6 +56,7 @@ func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool
 		return GetResponse{}, false, fmt.Errorf("get: zstd decompress: %w", err)
 	}
 	getResponse.Body = buffer
+	getResponse.BodySize = int64(buffer.Len())
 	return getResponse, ok, nil
 }
 
@@ -76,7 +77,7 @@ func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, e
 		Key:      request.Key,
 		OutputID: request.OutputID,
 		Body:     buffer,
-		BodySize: int64(buffer.Len()),
+		BodySize: request.BodySize,
 	})
 }
 

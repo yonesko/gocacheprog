@@ -81,6 +81,9 @@ func Test_CompressStorage(t *testing.T) {
 		if string(resp.OutputID) != "out1" {
 			t.Fatalf("OutputID mismatch: want %q, got %q", "out1", string(resp.OutputID))
 		}
+		if resp.BodySize != int64(len(body)) {
+			t.Fatalf("BodySize mismatch: want %d, got %d", len(body), resp.BodySize)
+		}
 		_ = storage.Close(ctx)
 	})
 
