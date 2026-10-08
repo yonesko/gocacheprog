@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -59,8 +58,8 @@ func isFileExists(path string) bool {
 }
 
 func (f fileSystemStorage) fileNames(key string) (diskPathBody, diskPathIndex string) {
-	diskPathBody = path.Join(f.dir, key+"-o")
-	diskPathIndex = path.Join(f.dir, key+"-i")
+	diskPathBody = filepath.Join(f.dir, key+"-o")
+	diskPathIndex = filepath.Join(f.dir, key+"-i")
 	return diskPathBody, diskPathIndex
 }
 
