@@ -76,7 +76,7 @@ func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, e
 		Key:      request.Key,
 		OutputID: request.OutputID,
 		Body:     buffer,
-		BodySize: request.BodySize,
+		BodySize: int64(buffer.Len()),
 	})
 }
 
