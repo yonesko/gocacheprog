@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -72,7 +71,7 @@ func (r redisStorage) get(ctx context.Context, key string) (io.Reader, meta, boo
 	}
 
 	// Возвращаем ридер на основе байт тела
-	return bytes.NewReader([]byte(bodyStr)), m, true, nil
+	return strings.NewReader(bodyStr), m, true, nil
 }
 
 func (r redisStorage) Put(ctx context.Context, request PutRequest) (string, error) {
