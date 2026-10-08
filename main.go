@@ -11,6 +11,7 @@ import (
 	"runtime/pprof"
 	"runtime/trace"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -137,12 +138,20 @@ func buildStorage() Storage {
 }
 
 func connectRedis() (redis.UniversalClient, error) {
-	return redis.NewUniversalClient(&redis.UniversalOptions{
+	client := redis.NewUniversalClient(&redis.UniversalOptions{
 		Addrs:      strings.Split(*redisAddresses, ","),
 		ClientName: "gocacheprog",
 		Username:   *redisUser,
 		Password:   *redisPassword,
-	}), nil
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := client.Ping(ctx).Err(); err != nil {
+		client.Close()
+		return nil, err
+	}
+	return client, nil
 }
 
 func must[T any](t T, err error) T {

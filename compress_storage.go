@@ -45,6 +45,7 @@ func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool
 		return getResponse, ok, err
 	}
 	decoder := zstdDecoderPool.Get().(*zstd.Decoder)
+	defer zstdDecoderPool.Put(decoder)
 	err = decoder.Reset(getResponse.Body)
 	if err != nil {
 		return getResponse, false, fmt.Errorf("get: zstd decoder: %w", err)
@@ -61,6 +62,7 @@ func (c compressStorage) Get(ctx context.Context, key string) (GetResponse, bool
 func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, error) {
 	buffer := &bytes.Buffer{}
 	encoder := zstdEncoderPool.Get().(*zstd.Encoder)
+	defer zstdEncoderPool.Put(encoder)
 	encoder.Reset(buffer)
 	_, err := io.Copy(encoder, request.Body)
 	if err != nil {
