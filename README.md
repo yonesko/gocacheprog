@@ -42,9 +42,7 @@ Simulated incremental build benchmark (200 packages, 70% cache hit rate, Apple M
 ## Installation
 
 ```bash
-go install git.sbercloud.tech/cp/go/utils/gocacheprog@latest
-# or from GitHub:
-# go install github.com/yonesko/gocacheprog@latest
+ go install github.com/yonesko/gocacheprog@latest
 ```
 
 ---
