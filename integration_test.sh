@@ -38,8 +38,13 @@ warm_time_file=$(mktemp)
 # and artifacts are uploaded to Valkey.
 run_build "Cold build (prometheus)" "$cold_time_file"
 
-# 2nd run – warm cache: local GOCACHE is fresh, but Valkey still holds
-# artifacts from the 1st run, so gocacheprog serves them.
+# Simulate a fresh CI runner: wipe local disk cache so warm build must fetch all artifacts from Valkey
+echo "Clearing local cache ($CACHE_DIR) to simulate a fresh CI/CD runner..."
+rm -rf "$CACHE_DIR"
+mkdir -p "$CACHE_DIR"
+
+# 2nd run – warm cache: local disk cache is completely empty, Valkey holds
+# artifacts from the 1st run, so gocacheprog downloads them from Valkey.
 run_build "Warm build (prometheus)" "$warm_time_file"
 
 COLD_S=$(cat "$cold_time_file")
