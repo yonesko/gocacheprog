@@ -66,6 +66,10 @@ func (c compressStorage) Put(ctx context.Context, request PutRequest) (string, e
 	if err != nil {
 		return "", fmt.Errorf("put: zstd compressor: %w", err)
 	}
+	err = encoder.Close()
+	if err != nil {
+		return "", fmt.Errorf("put: zstd encoder: %w", err)
+	}
 	return c.Storage.Put(ctx, PutRequest{
 		Key:      request.Key,
 		OutputID: request.OutputID,
