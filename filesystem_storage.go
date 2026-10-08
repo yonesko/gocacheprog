@@ -92,13 +92,18 @@ func writeFileAtomically(path string, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = io.Copy(file, body)
+	file.Close()
 	if err != nil {
 		os.Remove(file.Name())
 		return err
 	}
-	return os.Rename(file.Name(), path)
+	err = os.Rename(file.Name(), path)
+	if err != nil {
+		os.Remove(file.Name())
+		return err
+	}
+	return nil
 }
 
 func (f fileSystemStorage) Close(context.Context) error {
