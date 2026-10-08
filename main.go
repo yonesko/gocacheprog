@@ -101,6 +101,13 @@ func startCpuProfile() func() {
 }
 
 func buildStorage() Storage {
+	if *redisAddresses == "" {
+		storage := NewFileSystemStorage(*dir)
+		if *logMetrics > 0 {
+			return NewMetricsStorage(storage, *logMetrics)
+		}
+		return storage
+	}
 	client, err := connectRedis()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gocacheprog: failed to connect to redis server, switching to local file system: %s\n", err)
@@ -130,29 +137,12 @@ func buildStorage() Storage {
 }
 
 func connectRedis() (redis.UniversalClient, error) {
-	client := redis.NewClusterClient(&redis.ClusterOptions{
+	return redis.NewUniversalClient(&redis.UniversalOptions{
 		Addrs:      strings.Split(*redisAddresses, ","),
 		ClientName: "gocacheprog",
 		Username:   *redisUser,
 		Password:   *redisPassword,
-	})
-	err := client.Ping(context.Background()).Err()
-	if err != nil && err.Error() == "ERR This instance has cluster support disabled" {
-		split := strings.Split(*redisAddresses, ",")
-		if len(split) != 1 {
-			return nil, fmt.Errorf("invalid redis address count: %s", *redisAddresses)
-		}
-		return redis.NewClient(&redis.Options{
-			Addr:       split[0],
-			ClientName: "gocacheprog",
-			Username:   *redisUser,
-			Password:   *redisPassword,
-		}), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+	}), nil
 }
 
 func must[T any](t T, err error) T {

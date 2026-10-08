@@ -15,6 +15,9 @@ func newLoggingReader(reader io.Reader) io.Reader {
 
 func (l loggingReader) Read(p []byte) (n int, err error) {
 	read, err := l.Reader.Read(p)
+	if read > 0 {
+		os.Stderr.Write(p[:read])
+	}
 	if err != nil {
 		return read, err
 	}

@@ -79,14 +79,14 @@ func (a *App) Run(ctx context.Context) {
 			continue
 		}
 		if request.Command == CmdClose {
+			waitGroup.Wait()
+			err := a.storage.Close(ctx)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "error closing storage:", err)
+			}
 			a.resp(Response{ID: request.ID}, nil)
 			break
 		}
-	}
-	waitGroup.Wait()
-	err := a.storage.Close(ctx)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error closing storage:", err)
 	}
 }
 

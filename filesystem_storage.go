@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -59,8 +58,8 @@ func isFileExists(path string) bool {
 }
 
 func (f fileSystemStorage) fileNames(key string) (diskPathBody, diskPathIndex string) {
-	diskPathBody = path.Join(f.dir, key+"-o")
-	diskPathIndex = path.Join(f.dir, key+"-i")
+	diskPathBody = filepath.Join(f.dir, key+"-o")
+	diskPathIndex = filepath.Join(f.dir, key+"-i")
 	return diskPathBody, diskPathIndex
 }
 
@@ -88,17 +87,22 @@ func (f fileSystemStorage) Put(_ context.Context, request PutRequest) (string, e
 }
 
 func writeFileAtomically(path string, body io.Reader) error {
-	file, err := os.CreateTemp("", "*")
+	file, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = io.Copy(file, body)
+	file.Close()
 	if err != nil {
 		os.Remove(file.Name())
 		return err
 	}
-	return os.Rename(file.Name(), path)
+	err = os.Rename(file.Name(), path)
+	if err != nil {
+		os.Remove(file.Name())
+		return err
+	}
+	return nil
 }
 
 func (f fileSystemStorage) Close(context.Context) error {

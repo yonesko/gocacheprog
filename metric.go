@@ -111,22 +111,21 @@ func (s *metrics) Close(ctx context.Context) error {
 	s.mu.Unlock()
 
 	if s.logMetricsLevel == 1 {
-		return s.printStat()
+		s.printStat()
 	}
 	if s.logMetricsLevel == 2 {
-		return s.printAllStat()
+		s.printAllStat()
 	}
-	return nil
+	return err
 }
 
-func (s *metrics) printStat() error {
+func (s *metrics) printStat() {
 	fmt.Fprintf(os.Stderr, "gocacheprog: Gocacheprog get: %v put: %v\n",
 		time.Duration(s.GetCmdTimeSum).Truncate(time.Millisecond).String(),
 		time.Duration(s.PutCmdTimeSum).Truncate(time.Millisecond).String())
-	return nil
 }
 
-func (s *metrics) printAllStat() error {
+func (s *metrics) printAllStat() {
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 2, ' ', 0)
 
 	fmt.Fprintln(w, "=== OVERALL STATS ===")
@@ -180,7 +179,7 @@ func (s *metrics) printAllStat() error {
 		fmt.Fprintln(w, "Total Size\tN/A")
 	}
 
-	return w.Flush()
+	w.Flush()
 }
 
 func humanSize(bytes int64) string {
